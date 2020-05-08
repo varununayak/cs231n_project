@@ -6,7 +6,7 @@ import matplotlib.pyplot as plt
 import glob
 from utils import load_poses
 
-IMG_SIZE = 128 #224
+IMG_SIZE = 128
 IMG_SHAPE = (IMG_SIZE, IMG_SIZE, 3)
 WINDOW_SIZE = 5 #10
 WINDOW_IMG_SHAPE = (WINDOW_SIZE, IMG_SIZE, IMG_SIZE, 3)
@@ -44,9 +44,8 @@ def main():
     cnn_model_time_dist = tf.keras.models.Sequential([tf.keras.layers.TimeDistributed(cnn_model, input_shape=WINDOW_IMG_SHAPE)], name='time_dist_cnn_model')                                        
     cnn_model_time_dist.trainable = False
     print("Output shape of cnn_model_time_dist: ", cnn_model_time_dist.layers[-1].output_shape)
-    rnn_model = tf.keras.models.Sequential([tf.keras.layers.LSTM(16, return_sequences=True, name='lstm1'),
-                        tf.keras.layers.LSTM(16, return_sequences=False, name='lstm2'),
-                        tf.keras.layers.Dense(64, activation="relu"),
+    rnn_model = tf.keras.models.Sequential([tf.keras.layers.Bidirectional(tf.keras.layers.LSTM(1000, return_sequences=False, name='lstm_1')),
+                        tf.keras.layers.Dense(1000, activation="relu"),
                         tf.keras.layers.Dense(DIM_PREDICTIONS)], name='rnn_model')
     model = tf.keras.models.Sequential([cnn_model_time_dist, rnn_model])
     model.summary()
