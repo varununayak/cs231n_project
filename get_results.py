@@ -9,9 +9,12 @@ import matplotlib.pyplot as plt
 import argparse
 from utils import load_poses
 
+def get_xyz(poses):
+    return poses[:,0], poses[:,1], poses[:,2]
+
 def plot_trajectories(ground_truth_poses, predicted_poses):
-    x_g, z_g = ground_truth_poses[:,0,3], ground_truth_poses[:,2,3]
-    x_p, z_p = predicted_poses[:,0,3], predicted_poses[:,2,3]
+    x_g, _, z_g = get_xyz(ground_truth_poses)
+    x_p, _, z_p = get_xyz(predicted_poses[:,0,3])
     plt.plot(x_g, z_g,'b-')
     plt.plot(x_p, z_p,'c--')
     plt.plot(x_g[0], z_g[0], 'ro')
@@ -26,8 +29,8 @@ def plot_trajectories(ground_truth_poses, predicted_poses):
     # TODO(vn): save plot somewhere
 
 def compute_error_stats(ground_truth_poses, predicted_poses):
-    x_g, z_g, y_g = ground_truth_poses[:,0,3], ground_truth_poses[:,2,3], ground_truth_poses[:,1,3]
-    x_p, z_p, y_p = predicted_poses[:,0,3], predicted_poses[:,2,3], predicted_poses[:,1,3]
+    x_g, z_g, y_g = get_xyz(ground_truth_poses)
+    x_p, z_p, y_p = get_xyz(predicted_poses)
     x_mae = np.mean(np.abs(x_g - x_p)) 
     z_mae = np.mean(np.abs(z_g - z_p))
     y_mae = np.mean(np.abs(y_g - y_p))
