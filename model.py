@@ -15,10 +15,11 @@ class RCNN(object):
         # Create the model
         ## ------------------------------------rflownetlite.10-----------------------------------##
         if model_name == 'rflownetlite1.0':
-            cnn_model = tf.keras.models.Sequential([tf.keras.layers.Conv2D(4, (5,5), (1,1), 'same', activation=None,data_format='channels_last'),
-                                tf.keras.layers.Conv2D(4, (3,3), (1,1), 'same', activation=None,data_format='channels_last'),
+            cnn_model = tf.keras.models.Sequential([tf.keras.layers.Conv2D(4, (5,5), (2,2), 'same', activation=None,data_format='channels_last'),
+                                tf.keras.layers.Conv2D(4, (3,3), (2,2), 'same', activation=None,data_format='channels_last'),
                                 tf.keras.layers.Conv2D(4, (3,3), (1,1), 'same', activation=None, data_format='channels_last'),
                                 tf.keras.layers.Conv2D(8, (3,3), (1,1), 'same', activation=None, data_format='channels_last'),
+                                tf.keras.layers.Conv2D(16, (3,3), (1,1), 'same', activation=None, data_format='channels_last'),
                                 tf.keras.layers.Flatten()])
         ## ------------------------------------rresnet50v2---------------------------------------##
         elif model_name == 'rresnet50v2':
@@ -56,7 +57,7 @@ class RCNN(object):
         # Load any existing weights if they exist
         self._load_existing_weights()
         # Fit on the data
-        self.model.fit(images_windowed, poses, batch_size = 64, epochs = 1, callbacks=[save_weights_callback, mae_stop_callback()])
+        self.model.fit(images_windowed, poses, batch_size = 64, epochs = 10, callbacks=[save_weights_callback, mae_stop_callback()])
 
     def predict(self, images_windowed):
         if not self._loaded_weights:
