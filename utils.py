@@ -4,6 +4,8 @@ utils.py
 import numpy as np
 import glob
 import cv2 as cv
+import matplotlib.pyplot as plt
+from config import *
 
 def mat_to_zyx_euler_angles(R):
     beta   = -np.arctan2(R[2,0], np.sqrt(R[0,0]*R[0,0] + R[1,0]*R[1,0]))
@@ -41,17 +43,24 @@ def load_poses(pose_path, get_only_translation=False):
 
     return np.asarray(poses)
 
-def load_images(img_size, sequence='01'):
+def load_images(sequence='01'):
     filelist = glob.glob('small_dataset/odometry/{}/image_2/*.png'.format(sequence))
     images_raw = [cv.imread(fname) for fname in filelist]
     images = []
     for i, image in enumerate(images_raw):
-        image = cv.resize(image, (img_size, img_size), interpolation=cv.INTER_AREA)
-        image = np.divide(np.asarray(image), 255.0)
+        image = cv.resize(image, (IMG_SIZE, IMG_SIZE), interpolation=cv.INTER_AREA)
+        image = np.divide(np.asarray(image), 255.0) - 0.5
         images.append(image)
     images = np.asarray(images)
-    print("Images shape: ", images.shape)
     return images
+
+
+def create_windowed_images(images, num_train):
+    images_windowed = np.zeros((num_train, WINDOW_SIZE, IMG_SIZE, IMG_SIZE, 3))
+    for i in range(num_train):
+        for j in range(WINDOW_SIZE):
+            images_windowed[i,j] = images[i+j]
+    return images_windowed
 
 
 def cumulate_poses(poses_predicted, init_pose):
@@ -59,5 +68,27 @@ def cumulate_poses(poses_predicted, init_pose):
     for pose_diff in poses_predicted:
         poses_predicted_cum.append(poses_predicted_cum[-1] + pose_diff)
     return np.asarray(poses_predicted_cum)
+
+
+def plot_predictions_vs_truth(poses_predicted, poses_original, init_pose, use_absolute_pose_val):
+    if (not use_absolute_pose_val):
+        poses_predicted = cumulate_poses(poses_predicted, init_pose)
+    plt.plot(poses_original[:,0], poses_original[:,2])
+    plt.plot(poses_predicted[:,0], poses_predicted[:,2])
+    plt.show()
+
+def preprocess_data(poses, images, use_absolute_pose_val):
+    # First check some stuff for consistency
+    num_train, dim_poses = poses.shape
+    assert num_train == images.shape[0], "Number of images and number of poses don't match!"
+    assert dim_poses == DIM_PREDICTIONS, "Dimension mismatch between pose data and network output, check loaded data!"
+    num_train = num_train - WINDOW_SIZE + 1
+    # Process poses
+    poses_original = np.copy(poses[-num_train:]) # store for later
+    init_pose = poses[-num_train-1]
+    poses = poses[-num_train:] - (not use_absolute_pose_val) * poses[-num_train-1:-1]
+    # Create windowed dataset of images
+    images_windowed = create_windowed_images(images, num_train)
+    return poses, poses_original, images_windowed, init_pose
 
 
