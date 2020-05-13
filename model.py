@@ -3,8 +3,6 @@ rcnn architecure
 '''
 from config import * 
 import tensorflow as tf
-from tensorflow.keras.layers import BatchNormalization
-BatchNormalization._USE_V2_BEHAVIOR = False
 import sys
 import numpy as np
 
@@ -13,7 +11,7 @@ class RCNN(object):
 
     def __init__(self, model_name='rflownetlite1.0'):
         # Create the model
-        ## ------------------------------------rflownetlite.10-----------------------------------##
+        ## ------------------------------------rflownetlite1.0-----------------------------------##
         if model_name == 'rflownetlite1.0':
             cnn_model = tf.keras.models.Sequential([tf.keras.layers.Conv2D(4, (5,5), (2,2), 'same', activation=None,data_format='channels_last'),
                                 tf.keras.layers.Conv2D(4, (3,3), (2,2), 'same', activation=None,data_format='channels_last'),

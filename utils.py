@@ -70,9 +70,7 @@ def cumulate_poses(poses_predicted, init_pose):
     return np.asarray(poses_predicted_cum)
 
 
-def plot_predictions_vs_truth(poses_predicted, poses_original, init_pose, use_absolute_pose_val):
-    if (not use_absolute_pose_val):
-        poses_predicted = cumulate_poses(poses_predicted, init_pose)
+def plot_predictions_vs_truth(poses_predicted, poses_original):
     plt.plot(poses_original[:,0], poses_original[:,2])
     plt.plot(poses_predicted[:,0], poses_predicted[:,2])
     plt.show()
@@ -90,5 +88,17 @@ def preprocess_data(poses, images, use_absolute_pose_val):
     # Create windowed dataset of images
     images_windowed = create_windowed_images(images, num_train)
     return poses, poses_original, images_windowed, init_pose
+
+def write_pose_to_file(poses, save_path):
+    N, dims = poses.shape
+    if dims == 3:
+        poses = np.hstack((np.ones((N,1)), np.zeros((N,2)), np.reshape(poses[:,0], (N,1)), 
+                            np.zeros((N,1)), np.ones((N,1)), np.zeros((N,1)), np.reshape(poses[:,1], (N,1)),
+                            np.zeros((N,2)), np.ones((N,1)), np.reshape(poses[:,2], (N,1))))
+        print("Saving to {}".format(save_path))
+        np.savetxt(save_path, poses, delimiter=" ")
+    else: 
+        print("Saving with dims != 3 not supported yet")
+
 
 
