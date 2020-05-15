@@ -55,7 +55,12 @@ class RCNN(object):
         # Load any existing weights if they exist
         self._load_existing_weights()
         # Fit on the data
-        self.model.fit(images_windowed, poses, batch_size = 64, epochs = 10, callbacks=[save_weights_callback, mae_stop_callback()])
+        if tf.test.is_gpu_available():
+            device = '/device:GPU:0'
+        else:
+            device = '/device:CPU:0'
+        with tf.device(device):
+            self.model.fit(images_windowed, poses, batch_size = 64, epochs = 10, callbacks=[save_weights_callback, mae_stop_callback()])
 
     def predict(self, images_windowed):
         if not self._loaded_weights:
