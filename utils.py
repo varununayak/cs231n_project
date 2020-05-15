@@ -44,7 +44,7 @@ def load_poses(pose_path, get_only_translation=False):
     return np.asarray(poses)
 
 def load_images(sequence='01'):
-    filelist = glob.glob('small_dataset/odometry/{}/image_2/*.png'.format(sequence))
+    filelist = glob.glob('../dataset/sequences/{}/image_2/*.png'.format(sequence))
     images_raw = [cv.imread(fname) for fname in filelist]
     images = []
     for i, image in enumerate(images_raw):
@@ -54,26 +54,22 @@ def load_images(sequence='01'):
     images = np.asarray(images)
     return images
 
-
-def create_windowed_images(images, num_train):
-    images_windowed = np.zeros((num_train, WINDOW_SIZE, IMG_SIZE, IMG_SIZE, 3))
-    for i in range(num_train):
-        for j in range(WINDOW_SIZE):
-            images_windowed[i,j] = images[i+j]
-    return images_windowed
-
-
 def cumulate_poses(poses_predicted, init_pose):
     poses_predicted_cum = [init_pose]
     for pose_diff in poses_predicted:
         poses_predicted_cum.append(poses_predicted_cum[-1] + pose_diff)
     return np.asarray(poses_predicted_cum)
 
-
 def plot_predictions_vs_truth(poses_predicted, poses_original):
     plt.plot(poses_original[:,0], poses_original[:,2])
     plt.plot(poses_predicted[:,0], poses_predicted[:,2])
     plt.show()
+
+def create_windowed_images(images, num_train):
+    images_windowed = np.empty((0, WINDOW_SIZE, IMG_SIZE, IMG_SIZE, 3))
+    for i in range(num_train):
+        images_windowed = np.vstack((images_windowed, np.expand_dims(images[range(i,i+WINDOW_SIZE)], axis=0)))
+    return images_windowed
 
 def preprocess_data(poses, images, use_absolute_pose_val):
     # First check some stuff for consistency

@@ -21,8 +21,8 @@ def main():
     print("----------------------- Using TensorFlow version:", tf.__version__,"---------------------------")
     # Load ground truth
     poses = load_poses('ground_truth_odometry/{}.txt'.format(sequence), get_only_translation=True)
-    # Load and preprocess images
-    images = load_images(sequence=sequence)
+    # Load images (this call also resizes the image)
+    images = load_images(sequence=sequence) 
     # Process images, poses
     poses, poses_original, images_windowed, init_pose = preprocess_data(poses, images, using_absolute_pose_val)
     # Create model from pretrained CNN 
