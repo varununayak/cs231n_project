@@ -41,7 +41,7 @@ class RCNN(object):
         self._loaded_weights = False
 
     
-    def train(self, images_windowed, poses):
+    def train(self, data_gen):
         # Callbacks for stopping training and saving weights
         class mae_stop_callback(tf.keras.callbacks.Callback):
             def on_epoch_end(self, epoch, logs={}):
@@ -60,7 +60,7 @@ class RCNN(object):
         else:
             device = '/device:CPU:0'
         with tf.device(device):
-            self.model.fit(images_windowed, poses, batch_size = 64, epochs = 10, callbacks=[save_weights_callback, mae_stop_callback()])
+            self.model.fit_generator(data_gen, epochs = 10, callbacks=[save_weights_callback, mae_stop_callback()])
 
     def predict(self, images_windowed):
         if not self._loaded_weights:

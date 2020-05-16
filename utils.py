@@ -6,6 +6,7 @@ import glob
 import cv2 as cv
 import matplotlib.pyplot as plt
 from config import *
+import tensorflow as tf
 
 def mat_to_zyx_euler_angles(R):
     beta   = -np.arctan2(R[2,0], np.sqrt(R[0,0]*R[0,0] + R[1,0]*R[1,0]))
@@ -73,19 +74,24 @@ def create_windowed_images(images, num_train):
 
 def preprocess_data(poses, images, use_absolute_pose_val):
     # First check some stuff for consistency
-    num_train, dim_poses = poses.shape
-    assert num_train == images.shape[0], "Number of images and number of poses don't match!"
+    N, dim_poses = poses.shape
+    assert N == images.shape[0], "Number of images and number of poses don't match!"
     assert dim_poses == DIM_PREDICTIONS, "Dimension mismatch between pose data and network output, check loaded data!"
-    num_train = num_train - WINDOW_SIZE + 1
-    # Process poses
+    # For storage
+    num_train = N - WINDOW_SIZE + 1
     poses_original = np.copy(poses[-num_train:]) # store for later
+    # Store initial pose for cumulation
     init_pose = poses[-num_train-1]
-    poses = poses[-num_train:] - (not use_absolute_pose_val) * poses[-num_train-1:-1]
-    # Create windowed dataset of images
-    images_windowed = create_windowed_images(images, num_train)
-    return poses, poses_original, images_windowed, init_pose
+    # TS Gen
+    if (not use_absolute_pose_val):
+        poses = poses  - np.vstack((np.zeros((1, dim_poses)), poses[:-1]))
+    data_gen = tf.keras.preprocessing.sequence.TimeseriesGenerator(images, poses, WINDOW_SIZE, batch_size=64)
+    return data_gen, poses_original, init_pose
 
 def write_pose_to_file(poses, save_path):
+    answer = input("Do you want to save this predicted path to file? y/n: ")
+    if answer == "n":
+        return
     N, dims = poses.shape
     if dims == 3:
         poses = np.hstack((np.ones((N,1)), np.zeros((N,2)), np.reshape(poses[:,0], (N,1)), 

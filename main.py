@@ -24,12 +24,18 @@ def main():
     # Load images (this call also resizes the image)
     images = load_images(sequence=sequence) 
     # Process images, poses
-    poses, poses_original, images_windowed, init_pose = preprocess_data(poses, images, using_absolute_pose_val)
+    data_gen, poses_original, init_pose = preprocess_data(poses, images, using_absolute_pose_val)
     # Create model from pretrained CNN 
     rcnn_model = RCNN()                                     
+    # Train
     if (not predict_only):
         rcnn_model.model.summary()
-        rcnn_model.train(images_windowed, poses)
+        rcnn_model.train(data_gen)
+    # Create training set to predict on (this should be ideally changed to the validation set)
+    images_windowed = data_gen[0][0]
+    for i in range(1, len(data_gen)):
+        images_windowed = np.vstack((images_windowed, data_gen[i][0]))
+    # Predict on it 
     poses_predicted = rcnn_model.predict(images_windowed)
     if (not using_absolute_pose_val):
         poses_predicted = cumulate_poses(poses_predicted, init_pose)

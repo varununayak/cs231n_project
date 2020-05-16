@@ -2,3 +2,4 @@ dataset/*
 __pycache__/
 training_[01]/
 small_dataset/
+test.py
