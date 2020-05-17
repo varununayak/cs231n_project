@@ -34,12 +34,10 @@ def main():
         rcnn_model.train(data_gen)
         if (mode =='train_only'):
             return
-    # Create training set to predict on (this should be ideally changed to the validation set)
-    images_windowed = data_gen[0][0]
+    # Predict on images
+    poses_predicted = rcnn_model.predict(data_gen[0][0])
     for i in range(1, len(data_gen)):
-        images_windowed = np.vstack((images_windowed, data_gen[i][0]))
-    # Predict on it 
-    poses_predicted = rcnn_model.predict(images_windowed)
+        poses_predicted = np.vstack((poses_predicted, rcnn_model.predict(data_gen[i][0])))
     if (not using_absolute_pose_val):
         poses_predicted = cumulate_poses(poses_predicted, init_pose)
     plot_predictions_vs_truth(poses_predicted, poses_original)
