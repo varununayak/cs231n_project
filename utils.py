@@ -90,9 +90,9 @@ def preprocess_data(poses, images, use_absolute_pose_val):
     return data_gen, poses_original, init_pose
 
 def write_pose_to_file(poses, save_path):
-    answer = input("Do you want to save this predicted path to file? y/n: ")
-    if answer == "n":
-        return
+    #answer = input("Do you want to save this predicted path to file? y/n: ")
+    #if answer == "n":
+    #    return
     N, dims = poses.shape
     if dims == 3:
         poses = np.hstack((np.ones((N,1)), np.zeros((N,2)), np.reshape(poses[:,0], (N,1)), 
