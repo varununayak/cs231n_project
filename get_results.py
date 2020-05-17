@@ -45,10 +45,11 @@ def compute_error_stats(ground_truth_poses, predicted_poses):
 def main():
     # Argparse ground truth pose and predicted csv file locations
     parser = argparse.ArgumentParser(description="Compare ground truth and predicted trajectories.")
-    parser.add_argument("--ground_truth", type=str, nargs=1, default=['ground_truth_odometry/01.txt'])
-    parser.add_argument("--predicted", type=str, nargs=1, default=['predicted_odometry/01.txt'])
+    parser.add_argument("--sequence", type=str, nargs=1, default=['01'])
     parsed_args = parser.parse_args()
-    ground_truth_file_path, predicted_file_path = parsed_args.ground_truth[0], parsed_args.predicted[0]
+    sequence = parsed_args.sequence[0]
+    ground_truth_file_path = 'ground_truth_odometry/{}.txt'.format(sequence)
+    predicted_file_path = 'predicted_odometry/{}.txt'.format(sequence)
     # Get poses
     ground_truth_poses = load_poses(ground_truth_file_path, get_only_translation=True)
     predicted_poses = load_poses(predicted_file_path, get_only_translation=True)

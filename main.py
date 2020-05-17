@@ -11,14 +11,15 @@ from model import RCNN
 
 def main():
     parser = argparse.ArgumentParser(description="RCNN")
-    parser.add_argument('--predict_only', dest='predict_only', action='store_true')
+    parser.add_argument("--mode", type=str, nargs=1, default=['train_and_predict'])
     parser.add_argument('--using_absolute_pose_val', dest='using_absolute_pose_val', action='store_true')
     parser.add_argument("--sequence", type=str, nargs=1, default=['01'])
-    parser.set_defaults(predict_only=False)
     parser.set_defaults(using_absolute_pose_val=False)
     parsed_args = parser.parse_args()
-    predict_only, using_absolute_pose_val, sequence = parsed_args.predict_only, parsed_args.using_absolute_pose_val, parsed_args.sequence[0]
+    mode, using_absolute_pose_val, sequence = parsed_args.mode[0], parsed_args.using_absolute_pose_val, parsed_args.sequence[0]
     print("----------------------- Using TensorFlow version:", tf.__version__,"---------------------------")
+    print(f"-----------mode: {mode}, using_absolute_pose_val: {using_absolute_pose_val}, sequence: {sequence}-----------")
+    print("-------------------------------------------------------------------------------------")
     # Load ground truth
     poses = load_poses('ground_truth_odometry/{}.txt'.format(sequence), get_only_translation=True)
     # Load images (this call also resizes the image)
@@ -28,9 +29,11 @@ def main():
     # Create model from pretrained CNN 
     rcnn_model = RCNN()                                     
     # Train
-    if (not predict_only):
+    if (mode != 'predict_only'):
         rcnn_model.model.summary()
         rcnn_model.train(data_gen)
+        if (mode =='train_only'):
+            return
     # Create training set to predict on (this should be ideally changed to the validation set)
     images_windowed = data_gen[0][0]
     for i in range(1, len(data_gen)):

@@ -41,6 +41,7 @@ def load_poses(pose_path, get_only_translation=False):
 
     except:
         print('Error in finding or parsing filename: {}'.format(pose_path))
+        exit(0)
 
     return np.asarray(poses)
 

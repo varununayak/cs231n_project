@@ -60,7 +60,7 @@ class RCNN(object):
         else:
             device = '/device:CPU:0'
         with tf.device(device):
-            self.model.fit_generator(data_gen, epochs = 10, callbacks=[save_weights_callback, mae_stop_callback()])
+            self.model.fit_generator(data_gen, epochs = 50, callbacks=[save_weights_callback, mae_stop_callback()])
 
     def predict(self, images_windowed):
         if not self._loaded_weights:
