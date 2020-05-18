@@ -24,13 +24,18 @@ def main():
     print("----------------------- Using TensorFlow version:", tf.__version__,"---------------------------")
     print(f"-----------mode: {mode}, using_absolute_pose_val: {using_absolute_pose_val} -----------")
     print("-------------------------------------------------------------------------------------")
+    poses_set = []
+    images_set = []
+    for sequence in TRAIN_SEQUENCES:
+        # Load ground truth
+        poses_set.append(load_poses(f'ground_truth_odometry/{sequence}.txt', get_only_translation=True))
+        # Load images (this call also resizes the image)
+        images_set.append(load_images(sequence=sequence))
     for i in range(NUM_PASSES):
-        for sequence in TRAIN_SEQUENCES:
+        for j, sequence in enumerate(TRAIN_SEQUENCES):
             print(f"Training on sequence {sequence}, pass number {i}")
-            # Load ground truth
-            poses = load_poses(f'ground_truth_odometry/{sequence}.txt', get_only_translation=True)
-            # Load images (this call also resizes the image)
-            images = load_images(sequence=sequence) 
+            poses = poses_set[j]          
+            images = images_set[j]          
             # Process images, poses
             data_gen, poses_original, init_pose = preprocess_data(poses, images, using_absolute_pose_val)
             # Create model from pretrained CNN 
