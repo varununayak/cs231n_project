@@ -7,6 +7,7 @@ import cv2 as cv
 import matplotlib.pyplot as plt
 from config import *
 import tensorflow as tf
+import tensorflow_datasets as tfds
 
 def mat_to_zyx_euler_angles(R):
     beta   = -np.arctan2(R[2,0], np.sqrt(R[0,0]*R[0,0] + R[1,0]*R[1,0]))
@@ -47,13 +48,22 @@ def load_poses(pose_path, get_only_translation=False):
 
 def load_images(sequence='01'):
     filelist = glob.glob('../dataset/sequences/{}/image_2/*.png'.format(sequence))
-    images_raw = [cv.imread(fname) for fname in filelist]
-    images = []
-    for image in images_raw:
-        image = tf.image.resize(image, (IMG_SIZE, IMG_SIZE))
-        image = np.divide(np.asarray(image), 127.5) - 1.0
-        images.append(image)
-    images = np.asarray(images)
+    def process_path(file_path):
+        # load the raw data from the file as a string
+        img = tf.io.read_file(file_path)
+        def decode_img(img):
+            # convert the compressed string to a 3D uint8 tensor
+            img = tf.image.decode_jpeg(img, channels=3)
+            # Use `convert_image_dtype` to convert to floats in the [0,1] range.
+            img = tf.image.convert_image_dtype(img, tf.float32)
+            # resize the image to the desired size.
+            return tf.image.resize(img, [IMG_SIZE, IMG_SIZE])
+        img = decode_img(img)
+        return img
+    images_arr = [process_path(fname) for fname in filelist]
+    images = np.zeros((len(images_arr), IMG_SIZE, IMG_SIZE, 3))
+    for i in range(len(images_arr)):
+        images[i] = images_arr[i]
     return images
 
 def cumulate_poses(poses_predicted, init_pose):
@@ -76,7 +86,7 @@ def create_windowed_images(images, num_train):
 def preprocess_data(poses, images, use_absolute_pose_val):
     # First check some stuff for consistency
     N, dim_poses = poses.shape
-    assert N == images.shape[0], "Number of images and number of poses don't match!"
+    assert N == len(images), "Number of images and number of poses don't match!"
     assert dim_poses == DIM_PREDICTIONS, "Dimension mismatch between pose data and network output, check loaded data!"
     # For storage
     num_train = N - WINDOW_SIZE + 1

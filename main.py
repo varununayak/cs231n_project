@@ -10,8 +10,8 @@ from config import *
 from model import RCNN
 import time
 
-TRAIN_SEQUENCES = ['00', '01', '02', '03', '04', '05', '06', '07', '08']
-#TRAIN_SEQUENCES = ['01','01']
+#TRAIN_SEQUENCES = ['00', '01', '02', '03', '04', '05', '06', '07', '08']
+TRAIN_SEQUENCES = ['01','01']
 NUM_PASSES = 50
 
 def main():
