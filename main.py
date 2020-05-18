@@ -10,8 +10,9 @@ from config import *
 from model import RCNN
 import time
 
-#TRAIN_SEQUENCES = ['00', '01', '02', '03', '04', '05', '06', '07', '08']
-TRAIN_SEQUENCES = ['01','01']
+TRAIN_SEQUENCES = ['00', '01', '02', '03', '04', '05', '06', '07', '08']
+TEST_SEQUENCES = ['00', '01', '02', '03', '04', '05', '06', '07', '08', '09', '10']
+#TRAIN_SEQUENCES = ['00']
 NUM_PASSES = 50
 
 def main():
@@ -26,14 +27,18 @@ def main():
     print("-------------------------------------------------------------------------------------")
     poses_set = []
     images_set = []
+    if (mode == 'predict_only'):
+        TRAIN_SEQUENCES = TEST_SEQUENCES
+        NUM_PASSES = 1
     for sequence in TRAIN_SEQUENCES:
         # Load ground truth
         poses_set.append(load_poses(f'ground_truth_odometry/{sequence}.txt', get_only_translation=True))
         # Load images (this call also resizes the image)
         images_set.append(load_images(sequence=sequence))
-    for i in range(NUM_PASSES):
+        print(f"Loaded Sequence {sequence}")
+    for passno in range(NUM_PASSES):
         for j, sequence in enumerate(TRAIN_SEQUENCES):
-            print(f"Training on sequence {sequence}, pass number {i}")
+            print(f"Training on sequence {sequence}, pass number {passno}")
             poses = poses_set[j]          
             images = images_set[j]          
             # Process images, poses
@@ -48,8 +53,8 @@ def main():
                     continue
             # Predict on images
             poses_predicted = rcnn_model.predict(data_gen[0][0])
-            for i in range(1, len(data_gen)):
-                poses_predicted = np.vstack((poses_predicted, rcnn_model.predict(data_gen[i][0])))
+            for k in range(1, len(data_gen)):
+                poses_predicted = np.vstack((poses_predicted, rcnn_model.predict(data_gen[k][0])))
             if (not using_absolute_pose_val):
                 poses_predicted = cumulate_poses(poses_predicted, init_pose)
             plot_predictions_vs_truth(poses_predicted, poses_original)
