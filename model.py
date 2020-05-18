@@ -43,15 +43,9 @@ class RCNN(object):
 
     
     def train(self, data_gen):
-        # Callbacks for stopping training and saving weights
-        class mae_stop_callback(tf.keras.callbacks.Callback):
-            def on_epoch_end(self, epoch, logs={}):
-                if(logs.get('mae')<0.01):
-                    print("\nReached 0.01 mae so cancelling training!")
-                    self.model.stop_training = True
         save_weights_callback = tf.keras.callbacks.ModelCheckpoint(filepath=self.checkpoint_path, save_weights_only=True, verbose=1)
         # Define optimizer and compile model
-        opt = tf.keras.optimizers.Nadam(learning_rate=0.001, beta_1=0.9, beta_2=0.999, epsilon=1e-07, name="Nadam")
+        opt = tf.keras.optimizers.Nadam(learning_rate=0.0005, beta_1=0.9, beta_2=0.999, epsilon=1e-07, name="Nadam")
         self.model.compile(loss='mae', optimizer=opt, metrics=['mae'])
         # Load any existing weights if they exist
         self._load_existing_weights()

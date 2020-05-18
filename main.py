@@ -11,9 +11,10 @@ from model import RCNN
 import time
 
 TRAIN_SEQUENCES = ['00', '01', '02', '03', '04', '05', '06', '07', '08']
+#TRAIN_SEQUENCES = ['01', '01'] # for local machine
 TEST_SEQUENCES = ['00', '01', '02', '03', '04', '05', '06', '07', '08', '09', '10']
-#TRAIN_SEQUENCES = ['00']
-NUM_PASSES = 50
+#TEST_SEQUENCES = ['01'] # for local
+NUM_TRAIN_PASSES = 50
 
 def main():
     parser = argparse.ArgumentParser(description="RCNN")
@@ -28,17 +29,20 @@ def main():
     poses_set = []
     images_set = []
     if (mode == 'predict_only'):
-        TRAIN_SEQUENCES = TEST_SEQUENCES
-        NUM_PASSES = 1
-    for sequence in TRAIN_SEQUENCES:
+        sequences = TEST_SEQUENCES
+        num_passes = 1
+    else:
+        sequences = TRAIN_SEQUENCES
+        num_passes = NUM_TRAIN_PASSES
+    for sequence in sequences:
         # Load ground truth
         poses_set.append(load_poses(f'ground_truth_odometry/{sequence}.txt', get_only_translation=True))
         # Load images (this call also resizes the image)
         images_set.append(load_images(sequence=sequence))
         print(f"Loaded Sequence {sequence}")
-    for passno in range(NUM_PASSES):
-        for j, sequence in enumerate(TRAIN_SEQUENCES):
-            print(f"Training on sequence {sequence}, pass number {passno}")
+    for passno in range(num_passes):
+        for j, sequence in enumerate(sequences):
+            print(f"{mode} on sequence {sequence}, pass number {passno}")
             poses = poses_set[j]          
             images = images_set[j]          
             # Process images, poses
