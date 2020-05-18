@@ -49,9 +49,9 @@ def load_images(sequence='01'):
     filelist = glob.glob('../dataset/sequences/{}/image_2/*.png'.format(sequence))
     images_raw = [cv.imread(fname) for fname in filelist]
     images = []
-    for i, image in enumerate(images_raw):
-        image = cv.resize(image, (IMG_SIZE, IMG_SIZE), interpolation=cv.INTER_AREA)
-        image = np.divide(np.asarray(image), 255.0) - 0.5
+    for image in images_raw:
+        image = tf.image.resize(image, (IMG_SIZE, IMG_SIZE))
+        image = np.divide(np.asarray(image), 127.5) - 1.0
         images.append(image)
     images = np.asarray(images)
     return images
@@ -90,9 +90,9 @@ def preprocess_data(poses, images, use_absolute_pose_val):
     return data_gen, poses_original, init_pose
 
 def write_pose_to_file(poses, save_path):
-    #answer = input("Do you want to save this predicted path to file? y/n: ")
-    #if answer == "n":
-    #    return
+    answer = input("Do you want to save this predicted path to file? y/n: ")
+    if answer == "n":
+       return
     N, dims = poses.shape
     if dims == 3:
         poses = np.hstack((np.ones((N,1)), np.zeros((N,2)), np.reshape(poses[:,0], (N,1)), 

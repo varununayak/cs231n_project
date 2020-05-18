@@ -6,6 +6,7 @@ import tensorflow as tf
 import sys
 import numpy as np
 
+NUM_EPOCHS = 2
 
 class RCNN(object):
 
@@ -60,7 +61,7 @@ class RCNN(object):
         else:
             device = '/device:CPU:0'
         with tf.device(device):
-            self.model.fit_generator(data_gen, epochs = 50, callbacks=[save_weights_callback, mae_stop_callback()])
+            self.model.fit(data_gen, epochs = NUM_EPOCHS, callbacks=[save_weights_callback, mae_stop_callback()])
 
     def predict(self, images_windowed):
         if not self._loaded_weights:
