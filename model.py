@@ -5,8 +5,9 @@ from config import *
 import tensorflow as tf
 import sys
 import numpy as np
+import matplotlib.pyplot as plt
 
-NUM_EPOCHS = 2
+NUM_EPOCHS = 100
 
 class RCNN(object):
 
@@ -40,6 +41,7 @@ class RCNN(object):
         self.model_name = model_name
         # Flag
         self._loaded_weights = False
+        self._history = None
 
     
     def train(self, data_gen):
@@ -55,7 +57,16 @@ class RCNN(object):
         else:
             device = '/device:CPU:0'
         with tf.device(device):
-            self.model.fit(data_gen, epochs = NUM_EPOCHS, callbacks=[save_weights_callback])
+            self._history = self.model.fit(data_gen, epochs = NUM_EPOCHS, callbacks=[save_weights_callback])
+    
+    def plot_history(self):
+        loss = self._history.history['loss']
+        plt.plot(range(len(loss)), loss)
+        plt.grid()
+        plt.xlabel("Epoch Number")
+        plt.ylabel("Loss")
+        plt.savefig('loss.png')
+        plt.show()
 
     def predict(self, images_windowed):
         if not self._loaded_weights:

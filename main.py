@@ -10,11 +10,11 @@ from config import *
 from model import RCNN
 import time
 
-TRAIN_SEQUENCES = ['00', '01', '02', '03', '04', '05', '06', '07', '08']
-#TRAIN_SEQUENCES = ['01', '01'] # for local machine
-TEST_SEQUENCES = ['00', '01', '02', '03', '04', '05', '06', '07', '08', '09', '10']
-#TEST_SEQUENCES = ['01'] # for local
-NUM_TRAIN_PASSES = 50
+#TRAIN_SEQUENCES = ['00', '01', '02', '03', '04', '05', '06', '07', '08']
+TRAIN_SEQUENCES = ['01'] # for local machine
+#TEST_SEQUENCES = ['00', '01', '02', '03', '04', '05', '06', '07', '08', '09', '10']
+TEST_SEQUENCES = ['01'] # for local
+NUM_TRAIN_PASSES = 1
 
 def main():
     parser = argparse.ArgumentParser(description="RCNN")
@@ -53,12 +53,15 @@ def main():
             if (mode != 'predict_only'):
                 rcnn_model.model.summary()
                 rcnn_model.train(data_gen)
+                rcnn_model.plot_history()
                 if (mode =='train_only'):
                     continue
             # Predict on images
+            start = time.time()
             poses_predicted = rcnn_model.predict(data_gen[0][0])
             for k in range(1, len(data_gen)):
                 poses_predicted = np.vstack((poses_predicted, rcnn_model.predict(data_gen[k][0])))
+            print("Time required to predict is ", time.time() - start)
             if (not using_absolute_pose_val):
                 poses_predicted = cumulate_poses(poses_predicted, init_pose)
             plot_predictions_vs_truth(poses_predicted, poses_original)
