@@ -3,7 +3,7 @@ import numpy as np
 import tensorflow as tf
 from tensorflow.keras.layers import BatchNormalization
 BatchNormalization._USE_V2_BEHAVIOR = False
-from utils import load_poses, load_images, cumulate_poses, plot_predictions_vs_truth, create_windowed_images, preprocess_data, write_pose_to_file
+from utils import load_poses, load_images, cumulate_poses, plot_predictions_vs_truth, preprocess_data, write_pose_to_file
 import os
 import argparse
 from config import *
@@ -16,7 +16,7 @@ TRAIN_SEQUENCES = ['01'] # for local machine
 TEST_SEQUENCES = ['01'] # for local
 NUM_TRAIN_PASSES = 1
 
-def main():
+def parse_arguments():
     parser = argparse.ArgumentParser(description="RCNN")
     parser.add_argument("--mode", type=str, nargs=1, default=['train_and_predict'])
     parser.add_argument('--using_absolute_pose_val', dest='using_absolute_pose_val', action='store_true')
@@ -26,25 +26,33 @@ def main():
     print("----------------------- Using TensorFlow version:", tf.__version__,"---------------------------")
     print(f"-----------mode: {mode}, using_absolute_pose_val: {using_absolute_pose_val} -----------")
     print("-------------------------------------------------------------------------------------")
+    return mode, using_absolute_pose_val
+
+def main():
+    mode, using_absolute_pose_val = parse_arguments()
     poses_set = []
     images_set = []
+    # Populate sequences and num passes based on mode
     if (mode == 'predict_only'):
         sequences = TEST_SEQUENCES
         num_passes = 1
     else:
         sequences = TRAIN_SEQUENCES
         num_passes = NUM_TRAIN_PASSES
+    # Load dataset 
     for sequence in sequences:
         # Load ground truth
         poses_set.append(load_poses(f'ground_truth_odometry/{sequence}.txt', get_only_translation=True))
         # Load images (this call also resizes the image)
+        start = time.time()
         images_set.append(load_images(sequence=sequence))
+        print("Time taken ", time.time() - start)
         print(f"Loaded Sequence {sequence}")
-    for passno in range(num_passes):
-        for j, sequence in enumerate(sequences):
-            print(f"{mode} on sequence {sequence}, pass number {passno}")
-            poses = poses_set[j]          
-            images = images_set[j]          
+    for passnumber in range(num_passes):
+        for seqidx, sequence in enumerate(sequences):
+            print(f"{mode} on sequence {sequence}, pass number {passnumber}")
+            poses = poses_set[seqidx]          
+            images = images_set[seqidx]          
             # Process images, poses
             data_gen, poses_original, init_pose = preprocess_data(poses, images, using_absolute_pose_val)
             # Create model from pretrained CNN 
