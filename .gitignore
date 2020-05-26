@@ -1,5 +1,5 @@
-dataset/*
 __pycache__/
 training_[01]/
-small_dataset/
 test.py
+pyflow/
+rflownetlite1.0/
