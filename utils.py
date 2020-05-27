@@ -86,11 +86,10 @@ def preprocess_data(poses, images, use_absolute_pose_val, use_flow):
     if (not use_absolute_pose_val):
         poses = poses  - np.vstack((np.zeros((1, dim_poses)), poses[:-1]))
     if use_flow:
-        images = tf.data.Dataset.from_tensor_slices(images)
-        images = images.batch(64)
+        data = tf.data.Dataset.from_tensor_slices((images, poses[1:])).batch(64)
     else:
-        images = tf.keras.preprocessing.sequence.TimeseriesGenerator(images, poses, WINDOW_SIZE, batch_size=64)
-    return images, poses_original, init_pose
+        data = tf.keras.preprocessing.sequence.TimeseriesGenerator(images, poses, WINDOW_SIZE, batch_size=64)
+    return data, poses_original, init_pose
 
 def write_pose_to_file(poses, save_path):
     N, dims = poses.shape

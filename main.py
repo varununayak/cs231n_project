@@ -7,7 +7,7 @@ from utils import load_poses, load_images, cumulate_poses, plot_predictions_vs_t
 import os
 import argparse
 from config import *
-from model import RCNN
+from model import Model
 import time
 
 #TRAIN_SEQUENCES = ['00', '01', '02', '03', '04', '05', '06', '07', '08']
@@ -56,18 +56,25 @@ def main():
             # Process images, poses
             data_gen, poses_original, init_pose = preprocess_data(poses, images, using_absolute_pose_val, use_flow)
             # Create model from pretrained CNN 
-            rcnn_model = RCNN('pyflownet')                                     
+            if use_flow:
+                model_name = 'pyflownet'
+            else:
+                model_name = 'rflownetlite1.0'
+            my_model = Model(model_name)                                     
             # Train
             if (mode != 'predict_only'):
-                rcnn_model.model.summary()
-                rcnn_model.train(data_gen)
-                rcnn_model.plot_history()
+                my_model.model.summary()
+                my_model.train(data_gen)
+                my_model.plot_history()
                 if (mode =='train_only'):
                     continue
             # Predict on images
-            poses_predicted = rcnn_model.predict(data_gen[0][0])
-            for k in range(1, len(data_gen)):
-                poses_predicted = np.vstack((poses_predicted, rcnn_model.predict(data_gen[k][0])))
+            if use_flow:
+                poses_predicted = my_model.predict(np.asarray(images))
+            else:
+                poses_predicted = my_model.predict(data_gen[0][0])
+                for k in range(1, len(data_gen)):
+                    poses_predicted = np.vstack((poses_predicted, my_model.predict(data_gen[k][0])))
             if (not using_absolute_pose_val):
                 poses_predicted = cumulate_poses(poses_predicted, init_pose)
             plot_predictions_vs_truth(poses_predicted, poses_original)

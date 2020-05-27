@@ -7,20 +7,29 @@ import sys
 import numpy as np
 import matplotlib.pyplot as plt
 
-NUM_EPOCHS = 100
+NUM_EPOCHS = 30
 
-class RCNN(object):
+class Model(object):
 
     def __init__(self, model_name):
+        # Checkpoint to save and load weights from
+        self.checkpoint_path = "{}/cp.ckpt".format(model_name)
+        # Store model name
+        self.model_name = model_name
+        # Flag
+        self._loaded_weights = False
+        # Initialize the model
+        self._init_model()
+    
+    def _init_model(self):
         # Create the model
-        print("Model Name: ", model_name)
         ## ------------------------------------rflownetlite1.0-----------------------------------##
-        if model_name == 'rflownetlite1.0':
+        if self.model_name == 'rflownetlite1.0':
             cnn_model = tf.keras.models.Sequential([tf.keras.layers.Conv2D(4, (5,5), (2,2), 'same', activation=None,data_format='channels_last'),
-                                tf.keras.layers.Conv2D(4, (3,3), (2,2), 'same', activation=None,data_format='channels_last'),
-                                tf.keras.layers.Conv2D(4, (3,3), (1,1), 'same', activation=None, data_format='channels_last'),
-                                tf.keras.layers.Conv2D(8, (3,3), (1,1), 'same', activation=None, data_format='channels_last'),
-                                tf.keras.layers.Conv2D(16, (3,3), (1,1), 'same', activation=None, data_format='channels_last'),
+                                tf.keras.layers.Conv2D(4, (3,3), (2,2), 'same'),
+                                tf.keras.layers.Conv2D(4, (3,3), (1,1), 'same'),
+                                tf.keras.layers.Conv2D(8, (3,3), (1,1), 'same'),
+                                tf.keras.layers.Conv2D(16, (3,3), (1,1), 'same'),
                                 tf.keras.layers.Flatten()])
             ## ------------------------------------rnn model-------------------------------------##
             rnn_model = tf.keras.models.Sequential([tf.keras.layers.Bidirectional(tf.keras.layers.LSTM(32, return_sequences=True, name='lstm_1')),
@@ -30,28 +39,24 @@ class RCNN(object):
             model = tf.keras.models.Sequential([tf.keras.layers.TimeDistributed(cnn_model, input_shape=WINDOW_IMG_SHAPE)], name='time_dist_cnn_model')
             model = tf.keras.models.Sequential([model, rnn_model])
         ## ------------------------------------pyflownet-----------------------------------##
-        elif model_name == 'pyflownet':
-            model = tf.keras.models.Sequential([tf.keras.layers.Conv2D(16, (7,7), (2,2), 'same', activation=None,data_format='channels_last', input_shape=(IMG_SIZE, IMG_SIZE, 2)),
-                                tf.keras.layers.Conv2D(32, (5,5), (2,2), 'same', activation=None,data_format='channels_last'),
-                                tf.keras.layers.Conv2D(64, (5,5), (2,2), 'same', activation=None, data_format='channels_last'),
-                                tf.keras.layers.Conv2D(64, (3,3), (1,1), 'same', activation=None, data_format='channels_last'),
-                                tf.keras.layers.Conv2D(128, (3,3), (2,2), 'same', activation=None, data_format='channels_last'),
-                                tf.keras.layers.Conv2D(128, (3,3), (1,1), 'same', activation=None, data_format='channels_last'),
-                                tf.keras.layers.Conv2D(256, (1,1), (1,1), 'same', activation=None, data_format='channels_last'),
+        elif self.model_name == 'pyflownet':
+            model = tf.keras.models.Sequential([tf.keras.layers.Conv2D(16, (7,7), (2,2), 'same', input_shape=(IMG_SIZE, IMG_SIZE, 2)),
+                                tf.keras.layers.Conv2D(32, (5,5), (2,2), 'same'),
+                                tf.keras.layers.Conv2D(64, (5,5), (2,2), 'same'),
+                                tf.keras.layers.Conv2D(64, (3,3), (1,1), 'same'),
+                                tf.keras.layers.Conv2D(128, (3,3), (2,2), 'same'),
+                                tf.keras.layers.Conv2D(128, (3,3), (1,1), 'same'),
+                                tf.keras.layers.Conv2D(128, (3,3), (2,2), 'same'),
+                                tf.keras.layers.Conv2D(128, (3,3), (1,1), 'same'),
+                                tf.keras.layers.Conv2D(64, (1,1), (1,1), 'same'),
                                 tf.keras.layers.Flatten(),
-                                tf.keras.layers.Dense(256, activation="relu"),
+                                tf.keras.layers.Dense(256, activation="selu"),
                                 tf.keras.layers.Dense(DIM_PREDICTIONS)], name='pyflownet')
         else:
-            sys.exit("Model name {} is invalid.".format(model_name))
+            sys.exit("Model name {} is invalid.".format(self.model_name))
         self.model = model
-        # Checkpoint to save and load weights from
-        self.checkpoint_path = "{}/cp.ckpt".format(model_name)
-        # Store model name
-        self.model_name = model_name
-        # Flag
-        self._loaded_weights = False
+        # History
         self._history = None
-
     
     def train(self, data_gen):
         save_weights_callback = tf.keras.callbacks.ModelCheckpoint(filepath=self.checkpoint_path, save_weights_only=True, verbose=1)
@@ -77,14 +82,14 @@ class RCNN(object):
         plt.savefig('loss.png')
         plt.show()
 
-    def predict(self, images_windowed):
+    def predict(self, images):
         if not self._loaded_weights:
             self._load_existing_weights()
-        N = images_windowed.shape[0]
-        poses_predicted = self.model.predict(images_windowed[0:50])
+        N = images.shape[0]
+        poses_predicted = self.model.predict(images[0:50])
         for i in range(50,N,50):
             lower, upper = i, min(i + 50, N)
-            poses_predicted = np.vstack((poses_predicted, self.model.predict(images_windowed[lower:upper])))
+            poses_predicted = np.vstack((poses_predicted, self.model.predict(images[lower:upper])))
         return poses_predicted
     
     def _load_existing_weights(self):     # Try loading existing weights if they exist
