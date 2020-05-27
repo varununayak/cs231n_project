@@ -7,7 +7,7 @@ import sys
 import numpy as np
 import matplotlib.pyplot as plt
 
-NUM_EPOCHS = 30
+NUM_EPOCHS = 20
 
 class Model(object):
 
@@ -40,13 +40,12 @@ class Model(object):
             model = tf.keras.models.Sequential([model, rnn_model])
         ## ------------------------------------pyflownet-----------------------------------##
         elif self.model_name == 'pyflownet':
-            model = tf.keras.models.Sequential([tf.keras.layers.Conv2D(16, (7,7), (2,2), 'same', input_shape=(IMG_SIZE, IMG_SIZE, 2)),
+            model = tf.keras.models.Sequential([tf.keras.layers.Conv2D(32, (7,7), (2,2), 'same', input_shape=(IMG_SIZE, IMG_SIZE, 2)),
                                 tf.keras.layers.Conv2D(32, (5,5), (2,2), 'same'),
                                 tf.keras.layers.Conv2D(64, (5,5), (2,2), 'same'),
                                 tf.keras.layers.Conv2D(64, (3,3), (1,1), 'same'),
                                 tf.keras.layers.Conv2D(128, (3,3), (2,2), 'same'),
                                 tf.keras.layers.Conv2D(128, (3,3), (1,1), 'same'),
-                                tf.keras.layers.Conv2D(128, (3,3), (2,2), 'same'),
                                 tf.keras.layers.Conv2D(128, (3,3), (1,1), 'same'),
                                 tf.keras.layers.Conv2D(64, (1,1), (1,1), 'same'),
                                 tf.keras.layers.Flatten(),
@@ -79,7 +78,7 @@ class Model(object):
         plt.grid()
         plt.xlabel("Epoch Number")
         plt.ylabel("Loss")
-        plt.savefig('loss.png')
+        #plt.savefig('loss.png')
         plt.show()
 
     def predict(self, images):
