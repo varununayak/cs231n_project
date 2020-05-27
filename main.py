@@ -18,18 +18,20 @@ NUM_TRAIN_PASSES = 1
 
 def parse_arguments():
     parser = argparse.ArgumentParser(description="RCNN")
-    parser.add_argument("--mode", type=str, nargs=1, default=['train_and_predict'])
+    parser.add_argument("--mode", type=str, nargs=1, default=['train_only'])
     parser.add_argument('--using_absolute_pose_val', dest='using_absolute_pose_val', action='store_true')
+    parser.add_argument('--use_flow', dest='use_flow', action='store_true')
     parser.set_defaults(using_absolute_pose_val=False)
+    parser.set_defaults(use_flow=False)
     parsed_args = parser.parse_args()
-    mode, using_absolute_pose_val = parsed_args.mode[0], parsed_args.using_absolute_pose_val
+    mode, using_absolute_pose_val, use_flow = parsed_args.mode[0], parsed_args.using_absolute_pose_val, parsed_args.use_flow
     print("----------------------- Using TensorFlow version:", tf.__version__,"---------------------------")
-    print(f"-----------mode: {mode}, using_absolute_pose_val: {using_absolute_pose_val} -----------")
+    print(f"------mode: {mode}, using_absolute_pose_val: {using_absolute_pose_val}, use_flow: {use_flow} ----------")
     print("-------------------------------------------------------------------------------------")
-    return mode, using_absolute_pose_val
+    return mode, using_absolute_pose_val, use_flow
 
 def main():
-    mode, using_absolute_pose_val = parse_arguments()
+    mode, using_absolute_pose_val, use_flow = parse_arguments()
     poses_set = []
     images_set = []
     # Populate sequences and num passes based on mode
@@ -44,9 +46,7 @@ def main():
         # Load ground truth
         poses_set.append(load_poses(f'ground_truth_odometry/{sequence}.txt', get_only_translation=True))
         # Load images (this call also resizes the image)
-        start = time.time()
-        images_set.append(load_images(sequence=sequence))
-        print("Time taken ", time.time() - start)
+        images_set.append(load_images(sequence, use_flow))
         print(f"Loaded Sequence {sequence}")
     for passnumber in range(num_passes):
         for seqidx, sequence in enumerate(sequences):
@@ -54,9 +54,9 @@ def main():
             poses = poses_set[seqidx]          
             images = images_set[seqidx]          
             # Process images, poses
-            data_gen, poses_original, init_pose = preprocess_data(poses, images, using_absolute_pose_val)
+            data_gen, poses_original, init_pose = preprocess_data(poses, images, using_absolute_pose_val, use_flow)
             # Create model from pretrained CNN 
-            rcnn_model = RCNN()                                     
+            rcnn_model = RCNN('pyflownet')                                     
             # Train
             if (mode != 'predict_only'):
                 rcnn_model.model.summary()
@@ -65,11 +65,9 @@ def main():
                 if (mode =='train_only'):
                     continue
             # Predict on images
-            start = time.time()
             poses_predicted = rcnn_model.predict(data_gen[0][0])
             for k in range(1, len(data_gen)):
                 poses_predicted = np.vstack((poses_predicted, rcnn_model.predict(data_gen[k][0])))
-            print("Time required to predict is ", time.time() - start)
             if (not using_absolute_pose_val):
                 poses_predicted = cumulate_poses(poses_predicted, init_pose)
             plot_predictions_vs_truth(poses_predicted, poses_original)

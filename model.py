@@ -11,8 +11,9 @@ NUM_EPOCHS = 100
 
 class RCNN(object):
 
-    def __init__(self, model_name='rflownetlite1.0'):
+    def __init__(self, model_name):
         # Create the model
+        print("Model Name: ", model_name)
         ## ------------------------------------rflownetlite1.0-----------------------------------##
         if model_name == 'rflownetlite1.0':
             cnn_model = tf.keras.models.Sequential([tf.keras.layers.Conv2D(4, (5,5), (2,2), 'same', activation=None,data_format='channels_last'),
@@ -21,20 +22,28 @@ class RCNN(object):
                                 tf.keras.layers.Conv2D(8, (3,3), (1,1), 'same', activation=None, data_format='channels_last'),
                                 tf.keras.layers.Conv2D(16, (3,3), (1,1), 'same', activation=None, data_format='channels_last'),
                                 tf.keras.layers.Flatten()])
-        ## ------------------------------------rresnet50v2---------------------------------------##
-        elif model_name == 'rresnet50v2':
-            cnn_model = tf.keras.applications.ResNet50V2(include_top=False, pooling='max', input_shape=(IMG_SIZE,IMG_SIZE,3), weights='imagenet')
-            cnn_model = tf.keras.models.Sequential([cnn_model, tf.keras.layers.Flatten()])
-            cnn_model.trainable = False
+            ## ------------------------------------rnn model-------------------------------------##
+            rnn_model = tf.keras.models.Sequential([tf.keras.layers.Bidirectional(tf.keras.layers.LSTM(32, return_sequences=True, name='lstm_1')),
+                            tf.keras.layers.Bidirectional(tf.keras.layers.LSTM(32, return_sequences=False, name='lstm_2')),
+                            tf.keras.layers.Dense(16, activation="selu"),
+                            tf.keras.layers.Dense(DIM_PREDICTIONS)], name='rnn_model')
+            model = tf.keras.models.Sequential([tf.keras.layers.TimeDistributed(cnn_model, input_shape=WINDOW_IMG_SHAPE)], name='time_dist_cnn_model')
+            model = tf.keras.models.Sequential([model, rnn_model])
+        ## ------------------------------------pyflownet-----------------------------------##
+        elif model_name == 'pyflownet':
+            model = tf.keras.models.Sequential([tf.keras.layers.Conv2D(16, (7,7), (2,2), 'same', activation=None,data_format='channels_last', input_shape=(IMG_SIZE, IMG_SIZE, 2)),
+                                tf.keras.layers.Conv2D(32, (5,5), (2,2), 'same', activation=None,data_format='channels_last'),
+                                tf.keras.layers.Conv2D(64, (5,5), (2,2), 'same', activation=None, data_format='channels_last'),
+                                tf.keras.layers.Conv2D(64, (3,3), (1,1), 'same', activation=None, data_format='channels_last'),
+                                tf.keras.layers.Conv2D(128, (3,3), (2,2), 'same', activation=None, data_format='channels_last'),
+                                tf.keras.layers.Conv2D(128, (3,3), (1,1), 'same', activation=None, data_format='channels_last'),
+                                tf.keras.layers.Conv2D(256, (1,1), (1,1), 'same', activation=None, data_format='channels_last'),
+                                tf.keras.layers.Flatten(),
+                                tf.keras.layers.Dense(256, activation="relu"),
+                                tf.keras.layers.Dense(DIM_PREDICTIONS)], name='pyflownet')
         else:
             sys.exit("Model name {} is invalid.".format(model_name))
-        ## ------------------------------------common rnn model-------------------------------------##
-        rnn_model = tf.keras.models.Sequential([tf.keras.layers.Bidirectional(tf.keras.layers.LSTM(32, return_sequences=True, name='lstm_1')),
-                        tf.keras.layers.Bidirectional(tf.keras.layers.LSTM(32, return_sequences=False, name='lstm_2')),
-                        tf.keras.layers.Dense(16, activation="selu"),
-                        tf.keras.layers.Dense(DIM_PREDICTIONS)], name='rnn_model')
-        cnn_model_time_dist = tf.keras.models.Sequential([tf.keras.layers.TimeDistributed(cnn_model, input_shape=WINDOW_IMG_SHAPE)], name='time_dist_cnn_model')
-        self.model = tf.keras.models.Sequential([cnn_model_time_dist, rnn_model])
+        self.model = model
         # Checkpoint to save and load weights from
         self.checkpoint_path = "{}/cp.ckpt".format(model_name)
         # Store model name

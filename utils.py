@@ -14,19 +14,18 @@ def mat_to_zyx_euler_angles(R):
     if abs(c_beta) < 1e-5: # Singularity
         alpha = 0
         R[1,1] = max(-1, min(1, R[1,1]))
-        gamma = -sign(np.sin(beta)) * np.arccos(R[1,1])
+        gamma = -np.sign(np.sin(beta)) * np.arccos(R[1,1])
     else:
         alpha  = np.arctan2(R[1,0]/c_beta, R[0,0]/c_beta)
         gamma  = np.arctan2(R[2,1]/c_beta, R[2,2]/c_beta)
     return alpha, beta, gamma
 
-def load_poses(pose_path, get_only_translation=False):
+def load_poses(pose_path, get_only_translation=True):
     # Read and parse the poses
     poses = []
     try:
         with open(pose_path, 'r') as f:
             lines = f.readlines()
-            
             for line in lines:
                 T_w_cam0 = np.fromstring(line, dtype=float, sep=' ')
                 T_w_cam0 = T_w_cam0.reshape(3, 4)
@@ -38,34 +37,26 @@ def load_poses(pose_path, get_only_translation=False):
                     alpha, beta, gamma = mat_to_zyx_euler_angles(T[0:3,0:3])
                     T_w_cam0_xyz_abg = np.asarray([T_w_cam0[0,3], T_w_cam0[1,3], T_w_cam0[2,3], alpha, beta, gamma])
                     poses.append(T_w_cam0_xyz_abg)
-
     except:
         print('Error in finding or parsing filename: {}'.format(pose_path))
         exit(0)
-
     return np.asarray(poses)
 
-def load_images(sequence='01'):
-    filelist = glob.glob('../dataset/sequences/{}/image_2/*.png'.format(sequence))
+def load_images(sequence='01', use_flow=False):
+    if use_flow:
+        filepath = '../flow_dataset/{}/*.npy'.format(sequence)
+    else:
+        filepath = '../dataset/sequences/{}/image_2/*.png'.format(sequence)
+    filelist = glob.glob(filepath)
     images = []
-    
-    ####### OPTION 1 #########
     for path in filelist:
-        img = tf.keras.preprocessing.image.load_img(path, target_size=(IMG_SIZE, IMG_SIZE))
-        img = tf.keras.preprocessing.image.img_to_array(img)
-        images.append(img / 127.5 - 1.0)
-    ##########################
-
-    ####### OPTION 2 #########
-    # images_raw = [cv.imread(fname) for fname in filelist]
-    # images = []
-    # for image in images_raw:
-    #     image = tf.image.resize(image, (IMG_SIZE, IMG_SIZE))
-    #     image = np.divide(np.asarray(image), 127.5) - 1.0
-    #     images.append(image)
-    # images = np.asarray(images, dtype=np.float32)
-    ##########################
-
+        if use_flow:
+            img = np.load(path)
+            images.append(img)
+        else:
+            img = tf.keras.preprocessing.image.load_img(path, target_size=(IMG_SIZE, IMG_SIZE))
+            img = tf.keras.preprocessing.image.img_to_array(img)
+            images.append(img / 127.5 - 1.0)
     return images
 
 def cumulate_poses(poses_predicted, init_pose):
@@ -79,26 +70,29 @@ def plot_predictions_vs_truth(poses_predicted, poses_original):
     plt.plot(poses_predicted[:,0], poses_predicted[:,2])
     plt.show()
 
-def preprocess_data(poses, images, use_absolute_pose_val):
+def preprocess_data(poses, images, use_absolute_pose_val, use_flow):
     # First check some stuff for consistency
     N, dim_poses = poses.shape
-    assert N == len(images), "Number of images and number of poses don't match!"
     assert dim_poses == DIM_PREDICTIONS, "Dimension mismatch between pose data and network output, check loaded data!"
     # For storage
-    num_train = N - WINDOW_SIZE + 1
-    poses_original = np.copy(poses[-num_train:]) # store for later
+    if use_flow:
+        num_poses = N - 1    
+    else:
+        num_poses = N - WINDOW_SIZE + 1
+    #assert num_poses == len(images), f"Number of images {len(images)} and number of poses {num_poses} don't match!"
+    poses_original = np.copy(poses[-num_poses:]) # store for later
     # Store initial pose for cumulation
-    init_pose = poses[-num_train-1]
-    # TS Gen
+    init_pose = poses[-num_poses-1]
     if (not use_absolute_pose_val):
         poses = poses  - np.vstack((np.zeros((1, dim_poses)), poses[:-1]))
-    data_gen = tf.keras.preprocessing.sequence.TimeseriesGenerator(images, poses, WINDOW_SIZE, batch_size=64)
-    return data_gen, poses_original, init_pose
+    if use_flow:
+        images = tf.data.Dataset.from_tensor_slices(images)
+        images = images.batch(64)
+    else:
+        images = tf.keras.preprocessing.sequence.TimeseriesGenerator(images, poses, WINDOW_SIZE, batch_size=64)
+    return images, poses_original, init_pose
 
 def write_pose_to_file(poses, save_path):
-    #answer = input("Do you want to save this predicted path to file? y/n: ")
-    #if answer == "n":
-    #   return
     N, dims = poses.shape
     if dims == 3:
         poses = np.hstack((np.ones((N,1)), np.zeros((N,2)), np.reshape(poses[:,0], (N,1)), 
