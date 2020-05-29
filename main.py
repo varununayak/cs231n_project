@@ -60,6 +60,7 @@ def main():
     my_model = Model(model_name)                                     
     # Train
     if (mode == 'train'):
+        del images_set, poses_set
         my_model.model.summary()
         my_model.train(data_gen_train, data_gen_val)
         my_model.plot_history()

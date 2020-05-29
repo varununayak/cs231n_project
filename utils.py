@@ -114,7 +114,7 @@ def preprocess_data(poses_set, images_set, use_flow):
     num_train = int(0.8 * total_num)
     data_gen_train = data_gen.take(num_train)
     data_gen_val = data_gen.skip(num_train)
-    data_gen_train = data_gen_train.batch(64)
+    data_gen_train = data_gen_train.batch(16)
     data_gen_val = data_gen_val.batch(1)
     return data_gen_train, data_gen_val, poses_original_set, init_pose_set
 
