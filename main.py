@@ -11,7 +11,7 @@ from model import Model
 import time
 
 #TRAIN_SEQUENCES = ['00', '01', '02', '03', '04', '05', '06', '07', '08']
-TRAIN_SEQUENCES = ['01', '01'] # for local machine
+TRAIN_SEQUENCES = ['01'] # for local machine
 #TEST_SEQUENCES = ['00', '01', '02', '03', '04', '05', '06', '07', '08', '09', '10']
 TEST_SEQUENCES = ['01'] # for local
 
@@ -39,14 +39,14 @@ def main():
         images_set.append(load_images(sequence, use_flow))
         print(f"Loaded Sequence {sequence}")
     # Process images, poses
-    data_gen, poses_original_set, init_poses_set = preprocess_data(poses_set, images_set, use_flow)
+    data_gen_train, data_gen_val, poses_original_set, init_poses_set = preprocess_data(poses_set, images_set, use_flow)
     # Create model from pretrained CNN 
     model_name = 'pyflownet' if use_flow else 'rflownetlite1.0'
     my_model = Model(model_name)                                     
     # Train
     if (mode == 'train'):
         my_model.model.summary()
-        my_model.train(data_gen)
+        my_model.train(data_gen_train, data_gen_val)
         my_model.plot_history()
     # Predict on images
     elif (mode == 'predict'):
@@ -54,9 +54,9 @@ def main():
             if use_flow:
                 poses_predicted = my_model.predict(np.asarray(images))
             else:
-                poses_predicted = my_model.predict(data_gen[0][0])
-                for k in range(1, len(data_gen)):
-                    poses_predicted = np.vstack((poses_predicted, my_model.predict(data_gen[k][0])))
+                poses_predicted = my_model.predict(data_gen_train[0][0])
+                for k in range(1, len(data_gen_train)):
+                    poses_predicted = np.vstack((poses_predicted, my_model.predict(data_gen_train[k][0])))
             poses_predicted = cumulate_poses(poses_predicted, init_pose)
             plot_predictions_vs_truth(poses_predicted, poses_original)
             write_pose_to_file(poses_predicted, save_path=f"predicted_odometry/{sequence}.txt")

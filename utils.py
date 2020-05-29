@@ -71,7 +71,7 @@ def plot_predictions_vs_truth(poses_predicted, poses_original):
     plt.show()
 
 def preprocess_data(poses_set, images_set, use_flow):
-    total_num_train, poses_original_set, init_pose_set, data_gen = 0, [], [], None
+    total_num, poses_original_set, init_pose_set, data_gen = 0, [], [], None
     for poses, images in zip(poses_set, images_set):
         # First check some stuff for consistency
         N, dim_poses = poses.shape
@@ -88,9 +88,15 @@ def preprocess_data(poses_set, images_set, use_flow):
             data_gen = data_gen.concatenate(next_data_gen) if data_gen else next_data_gen
         else:
             data_gen = tf.keras.preprocessing.sequence.TimeseriesGenerator(images, poses, WINDOW_SIZE, batch_size=64)
-        total_num_train += num_poses
-    data_gen = data_gen.shuffle(total_num_train).batch(64)
-    return data_gen, poses_original_set, init_pose_set
+        total_num += num_poses
+    # Train - Val Split
+    data_gen = data_gen.shuffle(total_num)
+    num_train = int(0.8 * total_num)
+    data_gen_train = data_gen.take(num_train)
+    data_gen_val = data_gen.skip(num_train)
+    data_gen_train = data_gen_train.batch(64)
+    data_gen_val = data_gen_val.batch(1)
+    return data_gen_train, data_gen_val, poses_original_set, init_pose_set
 
 def write_pose_to_file(poses, save_path):
     N, dims = poses.shape

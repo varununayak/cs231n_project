@@ -56,7 +56,7 @@ class Model(object):
         # History
         self._history = None
     
-    def train(self, data_gen):
+    def train(self, data_gen_train, data_gen_val):
         save_weights_callback = tf.keras.callbacks.ModelCheckpoint(filepath=self.checkpoint_path, save_weights_only=True, verbose=1)
         # Define optimizer and compile model
         opt = tf.keras.optimizers.Nadam(learning_rate=0.0005, beta_1=0.9, beta_2=0.999, epsilon=1e-07, name="Nadam")
@@ -69,7 +69,7 @@ class Model(object):
         else:
             device = '/device:CPU:0'
         with tf.device(device):
-            self._history = self.model.fit(data_gen, epochs = NUM_EPOCHS, callbacks=[save_weights_callback])
+            self._history = self.model.fit(data_gen_train, validation_data=data_gen_val, epochs=NUM_EPOCHS, callbacks=[save_weights_callback])
     
     def plot_history(self):
         loss = self._history.history['loss']
