@@ -86,7 +86,7 @@ def preprocess_data(poses, images, use_absolute_pose_val, use_flow):
     if (not use_absolute_pose_val):
         poses = poses  - np.vstack((np.zeros((1, dim_poses)), poses[:-1]))
     if use_flow:
-        data = tf.data.Dataset.from_tensor_slices((images, poses[1:])).batch(64)
+        data = tf.data.Dataset.from_tensor_slices((images, poses[1:])).shuffle(num_poses).batch(64)
     else:
         data = tf.keras.preprocessing.sequence.TimeseriesGenerator(images, poses, WINDOW_SIZE, batch_size=64)
     return data, poses_original, init_pose
