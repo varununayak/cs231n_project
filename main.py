@@ -9,11 +9,14 @@ import argparse
 from config import *
 from model import Model
 import time
+from threading import Thread, Lock
 
 #TRAIN_SEQUENCES = ['00', '01', '02', '03', '04', '05', '06', '07', '08']
-TRAIN_SEQUENCES = ['01'] # for local machine
+TRAIN_SEQUENCES = ['01', '01'] # for local machine
 #TEST_SEQUENCES = ['00', '01', '02', '03', '04', '05', '06', '07', '08', '09', '10']
 TEST_SEQUENCES = ['01'] # for local
+
+mutex = Lock()
 
 def parse_arguments():
     parser = argparse.ArgumentParser(description="RCNN")
@@ -27,17 +30,29 @@ def parse_arguments():
     print("-------------------------------------------------------------------------------------")
     return mode, use_flow
 
+def load_data(get_only_translation, sequence, use_flow, poses_set, images_set):
+    poses = load_poses(f'ground_truth_odometry/{sequence}.txt', get_only_translation=True)
+    images = load_images(sequence, use_flow)
+    mutex.acquire()
+    poses_set.append(poses)
+    images_set.append(images)
+    mutex.release()
+    print(f"Loaded Sequence {sequence}")
+
 def main():
     mode, use_flow = parse_arguments()
     poses_set, images_set = [], []
     # Populate sequences and num passes based on mode
     sequences = TRAIN_SEQUENCES if mode =='train' else TEST_SEQUENCES
-    # Load dataset 
+    # Load dataset
+    threads = [] 
     for i, sequence in enumerate(sequences):
         # Load ground truth
-        poses_set.append(load_poses(f'ground_truth_odometry/{sequence}.txt', get_only_translation=True))
-        images_set.append(load_images(sequence, use_flow))
-        print(f"Loaded Sequence {sequence}")
+        t = Thread(target=load_data, args=(True, sequence, use_flow, poses_set, images_set))
+        t.start()
+        threads.append(t)
+    for t in threads:
+        t.join()
     # Process images, poses
     data_gen_train, data_gen_val, poses_original_set, init_poses_set = preprocess_data(poses_set, images_set, use_flow)
     # Create model from pretrained CNN 
