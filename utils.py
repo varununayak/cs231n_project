@@ -70,26 +70,28 @@ def plot_predictions_vs_truth(poses_predicted, poses_original):
     plt.plot(poses_predicted[:,0], poses_predicted[:,2])
     plt.show()
 
-def preprocess_data(poses, images, use_absolute_pose_val, use_flow):
-    # First check some stuff for consistency
-    N, dim_poses = poses.shape
-    assert dim_poses == DIM_PREDICTIONS, "Dimension mismatch between pose data and network output, check loaded data!"
-    # For storage
-    if use_flow:
-        num_poses = N - 1    
-    else:
-        num_poses = N - WINDOW_SIZE + 1
-    #assert num_poses == len(images), f"Number of images {len(images)} and number of poses {num_poses} don't match!"
-    poses_original = np.copy(poses[-num_poses:]) # store for later
-    # Store initial pose for cumulation
-    init_pose = poses[-num_poses-1]
-    if (not use_absolute_pose_val):
-        poses = poses  - np.vstack((np.zeros((1, dim_poses)), poses[:-1]))
-    if use_flow:
-        data = tf.data.Dataset.from_tensor_slices((images, poses[1:])).shuffle(num_poses).batch(64)
-    else:
-        data = tf.keras.preprocessing.sequence.TimeseriesGenerator(images, poses, WINDOW_SIZE, batch_size=64)
-    return data, poses_original, init_pose
+def preprocess_data(poses_set, images_set, use_absolute_pose_val, use_flow):
+    total_num_train, poses_original_set, init_pose_set, data_gen = 0, [], [], None
+    for poses, images in zip(poses_set, images_set):
+        # First check some stuff for consistency
+        N, dim_poses = poses.shape
+        assert dim_poses == DIM_PREDICTIONS, "Dimension mismatch between pose data and network output, check loaded data!"
+        # For storage
+        num_poses = (N - 1) if use_flow else (N - WINDOW_SIZE + 1)
+        # Store initial pose and original poses for later
+        poses_original_set.append(np.copy(poses[-num_poses:]))
+        init_pose_set.append(poses[-num_poses-1])
+        # Process poses to diff if using deltas
+        if (not use_absolute_pose_val):
+            poses = poses  - np.vstack((np.zeros((1, dim_poses)), poses[:-1]))
+        if use_flow:
+            next_data_gen = tf.data.Dataset.from_tensor_slices((images, poses[1:]))
+            data_gen = data_gen.concatenate(next_data_gen) if data_gen else next_data_gen
+        else:
+            data_gen = tf.keras.preprocessing.sequence.TimeseriesGenerator(images, poses, WINDOW_SIZE, batch_size=64)
+        total_num_train += num_poses
+    data_gen = data_gen.shuffle(total_num_train).batch(64)
+    return data_gen, poses_original_set, init_pose_set
 
 def write_pose_to_file(poses, save_path):
     N, dims = poses.shape

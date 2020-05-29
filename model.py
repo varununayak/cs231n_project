@@ -7,7 +7,7 @@ import sys
 import numpy as np
 import matplotlib.pyplot as plt
 
-NUM_EPOCHS = 40
+NUM_EPOCHS = 20
 
 class Model(object):
 
