@@ -70,7 +70,7 @@ def plot_predictions_vs_truth(poses_predicted, poses_original):
     plt.plot(poses_predicted[:,0], poses_predicted[:,2])
     plt.show()
 
-def preprocess_data(poses_set, images_set, use_absolute_pose_val, use_flow):
+def preprocess_data(poses_set, images_set, use_flow):
     total_num_train, poses_original_set, init_pose_set, data_gen = 0, [], [], None
     for poses, images in zip(poses_set, images_set):
         # First check some stuff for consistency
@@ -81,9 +81,8 @@ def preprocess_data(poses_set, images_set, use_absolute_pose_val, use_flow):
         # Store initial pose and original poses for later
         poses_original_set.append(np.copy(poses[-num_poses:]))
         init_pose_set.append(poses[-num_poses-1])
-        # Process poses to diff if using deltas
-        if (not use_absolute_pose_val):
-            poses = poses  - np.vstack((np.zeros((1, dim_poses)), poses[:-1]))
+        # Process poses to deltas
+        poses = poses - np.vstack((np.zeros((1, dim_poses)), poses[:-1]))
         if use_flow:
             next_data_gen = tf.data.Dataset.from_tensor_slices((images, poses[1:]))
             data_gen = data_gen.concatenate(next_data_gen) if data_gen else next_data_gen

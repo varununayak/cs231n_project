@@ -18,19 +18,17 @@ TEST_SEQUENCES = ['01'] # for local
 def parse_arguments():
     parser = argparse.ArgumentParser(description="RCNN")
     parser.add_argument("--mode", type=str, nargs=1, default=['train'])
-    parser.add_argument('--using_absolute_pose_val', dest='using_absolute_pose_val', action='store_true')
     parser.add_argument('--use_flow', dest='use_flow', action='store_true')
-    parser.set_defaults(using_absolute_pose_val=False)
     parser.set_defaults(use_flow=False)
     parsed_args = parser.parse_args()
-    mode, using_absolute_pose_val, use_flow = parsed_args.mode[0], parsed_args.using_absolute_pose_val, parsed_args.use_flow
+    mode, use_flow = parsed_args.mode[0], parsed_args.use_flow
     print("----------------------- Using TensorFlow version:", tf.__version__,"---------------------------")
-    print(f"------mode: {mode}, using_absolute_pose_val: {using_absolute_pose_val}, use_flow: {use_flow} ----------")
+    print(f"----------------------mode: {mode},  use_flow: {use_flow} -----------------------")
     print("-------------------------------------------------------------------------------------")
-    return mode, using_absolute_pose_val, use_flow
+    return mode, use_flow
 
 def main():
-    mode, using_absolute_pose_val, use_flow = parse_arguments()
+    mode, use_flow = parse_arguments()
     poses_set, images_set = [], []
     # Populate sequences and num passes based on mode
     sequences = TRAIN_SEQUENCES if mode =='train' else TEST_SEQUENCES
@@ -41,7 +39,7 @@ def main():
         images_set.append(load_images(sequence, use_flow))
         print(f"Loaded Sequence {sequence}")
     # Process images, poses
-    data_gen, poses_original_set, init_poses_set = preprocess_data(poses_set, images_set, using_absolute_pose_val, use_flow)
+    data_gen, poses_original_set, init_poses_set = preprocess_data(poses_set, images_set, use_flow)
     # Create model from pretrained CNN 
     model_name = 'pyflownet' if use_flow else 'rflownetlite1.0'
     my_model = Model(model_name)                                     
@@ -59,8 +57,7 @@ def main():
                 poses_predicted = my_model.predict(data_gen[0][0])
                 for k in range(1, len(data_gen)):
                     poses_predicted = np.vstack((poses_predicted, my_model.predict(data_gen[k][0])))
-            if (not using_absolute_pose_val):
-                poses_predicted = cumulate_poses(poses_predicted, init_pose)
+            poses_predicted = cumulate_poses(poses_predicted, init_pose)
             plot_predictions_vs_truth(poses_predicted, poses_original)
             write_pose_to_file(poses_predicted, save_path=f"predicted_odometry/{sequence}.txt")
     else:
