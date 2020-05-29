@@ -6,6 +6,7 @@ import tensorflow as tf
 import sys
 import numpy as np
 import matplotlib.pyplot as plt
+from datetime import datetime
 
 NUM_EPOCHS = 20
 
@@ -73,11 +74,16 @@ class Model(object):
     
     def plot_history(self):
         loss = self._history.history['loss']
-        plt.plot(range(len(loss)), loss)
+        val_loss = self._history.history['val_loss']
+        plt.plot(range(len(loss)), loss,'r-')
+        plt.plot(range(len(val_loss)), val_loss,'b--')
         plt.grid()
         plt.xlabel("Epoch Number")
         plt.ylabel("Loss")
-        #plt.savefig('loss.png')
+        plt.legend(['Train Loss', 'Validation Loss'])
+        dateTimeObj = datetime.now()
+        timestamp = str(dateTimeObj.month) + "-" + str(dateTimeObj.day) + "_" + str(dateTimeObj.hour) + ":" + str(dateTimeObj.minute)
+        plt.savefig('images/loss_{}.png'.format(timestamp))
         plt.show()
 
     def predict(self, images):
