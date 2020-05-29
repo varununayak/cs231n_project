@@ -7,6 +7,9 @@ import cv2 as cv
 import matplotlib.pyplot as plt
 from config import *
 import tensorflow as tf
+from threading import Thread, Lock
+
+mutex = Lock()
 
 def mat_to_zyx_euler_angles(R):
     beta   = -np.arctan2(R[2,0], np.sqrt(R[0,0]*R[0,0] + R[1,0]*R[1,0]))
@@ -70,25 +73,42 @@ def plot_predictions_vs_truth(poses_predicted, poses_original):
     plt.plot(poses_predicted[:,0], poses_predicted[:,2])
     plt.show()
 
+def load_dataset(poses, images, total_num_list, poses_original_set, init_pose_set, data_gen_list, use_flow):
+     # First check some stuff for consistency
+    N, dim_poses = poses.shape
+    assert dim_poses == DIM_PREDICTIONS, "Dimension mismatch between pose data and network output, check loaded data!"
+    # For storage
+    num_poses = (N - 1) if use_flow else (N - WINDOW_SIZE + 1)
+    # Store initial pose and original poses for later
+    poses_original = np.copy(poses[-num_poses:])
+    init_pose = poses[-num_poses-1]
+    # Process poses to deltas
+    poses = poses - np.vstack((np.zeros((1, dim_poses)), poses[:-1]))
+    if use_flow:
+        data_gen = tf.data.Dataset.from_tensor_slices((images, poses[1:]))
+        #data_gen = data_gen.concatenate(next_data_gen) if data_gen else next_data_gen
+    else:
+        data_gen = tf.keras.preprocessing.sequence.TimeseriesGenerator(images, poses, WINDOW_SIZE, batch_size=64)
+    mutex.acquire()
+    data_gen_list.append(data_gen)
+    poses_original_set.append(poses_original)
+    init_pose_set.append(init_pose)
+    total_num_list.append(num_poses)
+    mutex.release()
+
 def preprocess_data(poses_set, images_set, use_flow):
-    total_num, poses_original_set, init_pose_set, data_gen = 0, [], [], None
+    total_num_list, poses_original_set, init_pose_set, data_gen_list = [], [], [], []
+    threads = []
     for poses, images in zip(poses_set, images_set):
-        # First check some stuff for consistency
-        N, dim_poses = poses.shape
-        assert dim_poses == DIM_PREDICTIONS, "Dimension mismatch between pose data and network output, check loaded data!"
-        # For storage
-        num_poses = (N - 1) if use_flow else (N - WINDOW_SIZE + 1)
-        # Store initial pose and original poses for later
-        poses_original_set.append(np.copy(poses[-num_poses:]))
-        init_pose_set.append(poses[-num_poses-1])
-        # Process poses to deltas
-        poses = poses - np.vstack((np.zeros((1, dim_poses)), poses[:-1]))
-        if use_flow:
-            next_data_gen = tf.data.Dataset.from_tensor_slices((images, poses[1:]))
-            data_gen = data_gen.concatenate(next_data_gen) if data_gen else next_data_gen
-        else:
-            data_gen = tf.keras.preprocessing.sequence.TimeseriesGenerator(images, poses, WINDOW_SIZE, batch_size=64)
-        total_num += num_poses
+        t = Thread(target=load_dataset, args=(poses, images, total_num_list, poses_original_set, init_pose_set, data_gen_list, use_flow))
+        t.start()
+        threads.append(t)
+    for t in threads:
+        t.join()
+    total_num = sum(total_num_list)
+    data_gen = data_gen_list[0]
+    for i in range(1, len(data_gen_list)):
+        data_gen = data_gen.concatenate(data_gen_list[i])
     # Train - Val Split
     data_gen = data_gen.shuffle(total_num)
     num_train = int(0.8 * total_num)

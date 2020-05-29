@@ -12,7 +12,7 @@ import time
 from threading import Thread, Lock
 
 #TRAIN_SEQUENCES = ['00', '01', '02', '03', '04', '05', '06', '07', '08']
-TRAIN_SEQUENCES = ['01', '01'] # for local machine
+TRAIN_SEQUENCES = ['01']*3 # for local machine
 #TEST_SEQUENCES = ['00', '01', '02', '03', '04', '05', '06', '07', '08', '09', '10']
 TEST_SEQUENCES = ['01'] # for local
 
@@ -46,7 +46,7 @@ def main():
     sequences = TRAIN_SEQUENCES if mode =='train' else TEST_SEQUENCES
     # Load dataset
     threads = [] 
-    for i, sequence in enumerate(sequences):
+    for sequence in sequences:
         # Load ground truth
         t = Thread(target=load_data, args=(True, sequence, use_flow, poses_set, images_set))
         t.start()
