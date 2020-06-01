@@ -12,7 +12,7 @@ import time
 from threading import Thread, Lock
 
 #TRAIN_SEQUENCES = ['00', '01', '02', '03', '04', '05', '06', '07', '08']
-TRAIN_SEQUENCES = ['01']*3 # for local machine
+TRAIN_SEQUENCES = ['01']*2 # for local machine
 #TEST_SEQUENCES = ['00', '01', '02', '03', '04', '05', '06', '07', '08', '09', '10']
 TEST_SEQUENCES = ['01'] # for local
 
@@ -21,14 +21,13 @@ mutex = Lock()
 def parse_arguments():
     parser = argparse.ArgumentParser(description="RCNN")
     parser.add_argument("--mode", type=str, nargs=1, default=['train'])
-    parser.add_argument('--use_flow', dest='use_flow', action='store_true')
-    parser.set_defaults(use_flow=False)
+    parser.add_argument("--model_name", type=str, nargs=1, default=['pyflownet'])
     parsed_args = parser.parse_args()
-    mode, use_flow = parsed_args.mode[0], parsed_args.use_flow
+    mode, model_name = parsed_args.mode[0], parsed_args.model_name[0]
     print("----------------------- Using TensorFlow version:", tf.__version__,"---------------------------")
-    print(f"----------------------mode: {mode},  use_flow: {use_flow} -----------------------")
+    print(f"----------------------mode: {mode},  model_name: {model_name} -----------------------")
     print("-------------------------------------------------------------------------------------")
-    return mode, use_flow
+    return mode, model_name
 
 def load_data(get_only_translation, sequence, use_flow, poses_set, images_set):
     poses = load_poses(f'ground_truth_odometry/{sequence}.txt', get_only_translation=True)
@@ -40,7 +39,7 @@ def load_data(get_only_translation, sequence, use_flow, poses_set, images_set):
     print(f"Loaded Sequence {sequence}")
 
 def main():
-    mode, use_flow = parse_arguments()
+    mode, model_name = parse_arguments()
     poses_set, images_set = [], []
     # Populate sequences and num passes based on mode
     sequences = TRAIN_SEQUENCES if mode =='train' else TEST_SEQUENCES
@@ -48,31 +47,35 @@ def main():
     threads = [] 
     for sequence in sequences:
         # Load ground truth
-        t = Thread(target=load_data, args=(True, sequence, use_flow, poses_set, images_set))
+        t = Thread(target=load_data, args=(True, sequence, model_name, poses_set, images_set))
         t.start()
         threads.append(t)
     for t in threads:
         t.join()
-    # Process images, poses
-    data_gen_train, data_gen_val, poses_original_set, init_poses_set = preprocess_data(poses_set, images_set, use_flow)
     # Create model from pretrained CNN 
-    model_name = 'pyflownet' if use_flow else 'rflownetlite1.0'
     my_model = Model(model_name)                                     
     # Train
     if (mode == 'train'):
-        del images_set, poses_set
+        # Process images, poses
+        data_gen_train, data_gen_val = preprocess_data(poses_set, images_set, model_name, mode)
+        del images_set, poses_set # Memory conservation
         my_model.model.summary()
         my_model.train(data_gen_train, data_gen_val)
         my_model.plot_history()
     # Predict on images
     elif (mode == 'predict'):
-        for poses_original, init_pose, images, sequence in zip(poses_original_set, init_poses_set, images_set, sequences):
-            if use_flow:
-                poses_predicted = my_model.predict(np.asarray(images))
+        # Process images, poses
+        data_gen_list, poses_original_set, init_poses_set = preprocess_data(poses_set, images_set, model_name, mode)
+        del images_set # Memory conservation
+        # For each sequence
+        for data_gen, poses_original, init_pose, sequence in zip(data_gen_list, poses_original_set, 
+                                                                        init_poses_set, sequences):
+            if model_name == 'pyflownet':
+                poses_predicted = my_model.predict(data_gen.batch(1))
             else:
-                poses_predicted = my_model.predict(data_gen_train[0][0])
+                poses_predicted = my_model.predict(data_gen[0][0])
                 for k in range(1, len(data_gen_train)):
-                    poses_predicted = np.vstack((poses_predicted, my_model.predict(data_gen_train[k][0])))
+                    poses_predicted = np.vstack((poses_predicted, my_model.predict(data_gen[k][0])))
             poses_predicted = cumulate_poses(poses_predicted, init_pose)
             plot_predictions_vs_truth(poses_predicted, poses_original)
             write_pose_to_file(poses_predicted, save_path=f"predicted_odometry/{sequence}.txt")

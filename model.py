@@ -86,14 +86,15 @@ class Model(object):
         plt.savefig('images/loss_{}.png'.format(timestamp))
         plt.show()
 
-    def predict(self, images):
+    def predict(self, data_gen):
         if not self._loaded_weights:
             self._load_existing_weights()
-        N = images.shape[0]
-        poses_predicted = self.model.predict(images[0:50])
-        for i in range(50,N,50):
-            lower, upper = i, min(i + 50, N)
-            poses_predicted = np.vstack((poses_predicted, self.model.predict(images[lower:upper])))
+        poses_predicted = self.model.predict(data_gen)
+        # N = images.shape[0]
+        # poses_predicted = self.model.predict(images[0:50])
+        # for i in range(50,N,50):
+        #     lower, upper = i, min(i + 50, N)
+        #     poses_predicted = np.vstack((poses_predicted, self.model.predict(images[lower:upper])))
         return poses_predicted
     
     def _load_existing_weights(self):     # Try loading existing weights if they exist
