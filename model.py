@@ -8,7 +8,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 from datetime import datetime
 
-NUM_EPOCHS = 20
+NUM_EPOCHS = 50
 
 class Model(object):
 
@@ -51,6 +51,22 @@ class Model(object):
                                 tf.keras.layers.Flatten(),
                                 tf.keras.layers.Dense(256, activation="selu"),
                                 tf.keras.layers.Dense(DIM_PREDICTIONS)], name='pyflownet')
+        ## ------------------------------------rflownet-----------------------------------##
+        elif self.model_name == 'rflownet':
+            cnn_model = tf.keras.models.Sequential([tf.keras.layers.Conv2D(32, (5,5), (2,2), 'same', input_shape=(IMG_SIZE, IMG_SIZE, 2)),
+                                tf.keras.layers.Conv2D(32, (5,5), (2,2), 'same'),
+                                tf.keras.layers.Conv2D(64, (5,5), (2,2), 'same'),
+                                tf.keras.layers.Conv2D(64, (3,3), (2,2), 'same'),
+                                tf.keras.layers.Conv2D(128, (3,3), (1,1), 'same'),
+                                tf.keras.layers.Conv2D(128, (3,3), (1,1), 'same'),
+                                tf.keras.layers.Flatten()])
+            ## ------------------------------------rnn model-------------------------------------##
+            rnn_model = tf.keras.models.Sequential([tf.keras.layers.LSTM(64, return_sequences=True, name='lstm_1'),
+                            tf.keras.layers.LSTM(64, return_sequences=False, name='lstm_2'),
+                            tf.keras.layers.Dense(128, activation="selu"),
+                            tf.keras.layers.Dense(DIM_PREDICTIONS)], name='rnn_model')
+            model = tf.keras.models.Sequential([tf.keras.layers.TimeDistributed(cnn_model, input_shape=(None, IMG_SIZE, IMG_SIZE, 2))], name='time_dist_cnn_model')
+            model = tf.keras.models.Sequential([model, rnn_model])
         else:
             sys.exit("Model name {} is invalid.".format(self.model_name))
         self.model = model
@@ -90,11 +106,6 @@ class Model(object):
         if not self._loaded_weights:
             self._load_existing_weights()
         poses_predicted = self.model.predict(data_gen)
-        # N = images.shape[0]
-        # poses_predicted = self.model.predict(images[0:50])
-        # for i in range(50,N,50):
-        #     lower, upper = i, min(i + 50, N)
-        #     poses_predicted = np.vstack((poses_predicted, self.model.predict(images[lower:upper])))
         return poses_predicted
     
     def _load_existing_weights(self):     # Try loading existing weights if they exist

@@ -10,9 +10,10 @@ from config import *
 from model import Model
 import time
 from threading import Thread, Lock
+import gc
 
 #TRAIN_SEQUENCES = ['00', '01', '02', '03', '04', '05', '06', '07', '08']
-TRAIN_SEQUENCES = ['01']*2 # for local machine
+TRAIN_SEQUENCES = ['01'] # for local machine
 #TEST_SEQUENCES = ['00', '01', '02', '03', '04', '05', '06', '07', '08', '09', '10']
 TEST_SEQUENCES = ['01'] # for local
 
@@ -29,9 +30,9 @@ def parse_arguments():
     print("-------------------------------------------------------------------------------------")
     return mode, model_name
 
-def load_data(get_only_translation, sequence, use_flow, poses_set, images_set):
+def load_data(get_only_translation, sequence, model_name, poses_set, images_set):
     poses = load_poses(f'ground_truth_odometry/{sequence}.txt', get_only_translation=True)
-    images = load_images(sequence, use_flow)
+    images = load_images(sequence, model_name)
     mutex.acquire()
     poses_set.append(poses)
     images_set.append(images)
@@ -60,6 +61,7 @@ def main():
         data_gen_train, data_gen_val = preprocess_data(poses_set, images_set, model_name, mode)
         del images_set, poses_set # Memory conservation
         my_model.model.summary()
+        gc.collect()
         my_model.train(data_gen_train, data_gen_val)
         my_model.plot_history()
     # Predict on images
@@ -67,15 +69,11 @@ def main():
         # Process images, poses
         data_gen_list, poses_original_set, init_poses_set = preprocess_data(poses_set, images_set, model_name, mode)
         del images_set # Memory conservation
+        gc.collect()
         # For each sequence
         for data_gen, poses_original, init_pose, sequence in zip(data_gen_list, poses_original_set, 
                                                                         init_poses_set, sequences):
-            if model_name == 'pyflownet':
-                poses_predicted = my_model.predict(data_gen.batch(1))
-            else:
-                poses_predicted = my_model.predict(data_gen[0][0])
-                for k in range(1, len(data_gen_train)):
-                    poses_predicted = np.vstack((poses_predicted, my_model.predict(data_gen[k][0])))
+            poses_predicted = my_model.predict(data_gen.batch(1))
             poses_predicted = cumulate_poses(poses_predicted, init_pose)
             plot_predictions_vs_truth(poses_predicted, poses_original)
             write_pose_to_file(poses_predicted, save_path=f"predicted_odometry/{sequence}.txt")

@@ -45,10 +45,12 @@ def load_poses(pose_path, get_only_translation=True):
         exit(0)
     return np.asarray(poses)
 
-def load_images(sequence='01', use_flow=False):
-    if use_flow:
+def load_images(sequence='01', model_name='pyflownet'):
+    if model_name == 'pyflownet' or model_name == 'rflownet':
+        use_flow = True
         filepath = '../flow_dataset/{}/*.npy'.format(sequence)
     else:
+        use_flow = False
         filepath = '../dataset/sequences/{}/image_2/*.png'.format(sequence)
     filelist = glob.glob(filepath)
     images = []
@@ -87,7 +89,7 @@ def load_dataset(poses, images, total_num_list, poses_original_set, init_pose_se
     if model_name == 'pyflownet':
         data_gen = tf.data.Dataset.from_tensor_slices((images, poses[1:]))
     else:
-        data_gen = tf.keras.preprocessing.sequence.TimeseriesGenerator(images, poses, WINDOW_SIZE, batch_size=64)
+        data_gen = tf.keras.preprocessing.timeseries_dataset_from_array(images, poses[1:], WINDOW_SIZE).unbatch()
     mutex.acquire()
     data_gen_list.append(data_gen)
     poses_original_set.append(poses_original)
@@ -114,7 +116,7 @@ def preprocess_data(poses_set, images_set, model_name, mode):
         num_train = int(0.8 * total_num)
         data_gen_train = data_gen.take(num_train)
         data_gen_val = data_gen.skip(num_train)
-        data_gen_train = data_gen_train.batch(16)
+        data_gen_train = data_gen_train.batch(64)
         data_gen_val = data_gen_val.batch(1)
         return data_gen_train, data_gen_val
     else:
