@@ -8,7 +8,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 from datetime import datetime
 
-NUM_EPOCHS = 50
+NUM_EPOCHS = 100
 
 class Model(object):
 
@@ -76,8 +76,7 @@ class Model(object):
     def train(self, data_gen_train, data_gen_val):
         save_weights_callback = tf.keras.callbacks.ModelCheckpoint(filepath=self.checkpoint_path, save_weights_only=True, verbose=1)
         # Define optimizer and compile model
-        opt = tf.keras.optimizers.Nadam(learning_rate=0.0005, beta_1=0.9, beta_2=0.999, epsilon=1e-07, name="Nadam")
-        self.model.compile(loss='mae', optimizer=opt, metrics=['mae'])
+        self.model.compile(loss='mae', optimizer='sgd', metrics=['mae'])
         # Load any existing weights if they exist
         self._load_existing_weights()
         # Fit on the data
