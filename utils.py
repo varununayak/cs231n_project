@@ -3,7 +3,6 @@ utils.py
 '''
 import numpy as np
 import glob
-import cv2 as cv
 import matplotlib.pyplot as plt
 from config import *
 import tensorflow as tf
@@ -61,9 +60,10 @@ def load_images(sequence='01', model_name='pyflownet'):
             img = np.load(path)
             images.append(img)
         elif model_name == 'rdispnet':
-            img = np.load(path)
-            img = np.squeeze(img)
-            for im in img:
+            imgs = np.load(path)
+            for im in np.squeeze(imgs):
+                im = (im - 80.0)/100.0
+                im = np.expand_dims(im, axis=-1)
                 images.append(im)
         else:
             img = tf.keras.preprocessing.image.load_img(path, target_size=(IMG_SIZE, IMG_SIZE))
@@ -96,6 +96,8 @@ def load_dataset(poses, images, total_num_list, poses_original_set,
     poses = poses - np.vstack((np.zeros((1, dim_poses)), poses[:-1]))
     if model_name == 'pyflownet':
         data_gen = tf.data.Dataset.from_tensor_slices((images, poses[1:]))
+    elif model_name == 'rdispnet':
+        data_gen = tf.keras.preprocessing.timeseries_dataset_from_array(images, poses, WINDOW_SIZE).unbatch()
     else:
         data_gen = tf.keras.preprocessing.timeseries_dataset_from_array(images, poses[1:], WINDOW_SIZE).unbatch()
     mutex.acquire()
