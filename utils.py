@@ -8,6 +8,7 @@ import matplotlib.pyplot as plt
 from config import *
 import tensorflow as tf
 from threading import Thread, Lock
+import scipy.misc
 
 mutex = Lock()
 
@@ -47,17 +48,23 @@ def load_poses(pose_path, get_only_translation=True):
 
 def load_images(sequence='01', model_name='pyflownet'):
     if model_name == 'pyflownet' or model_name == 'rflownet':
-        use_flow = True
         filepath = '../flow_dataset/{}/*.npy'.format(sequence)
+    elif model_name == 'rdispnet':
+        filepath = '../disparity_maps/{}/*npy'.format(sequence)
     else:
-        use_flow = False
         filepath = '../dataset/sequences/{}/image_2/*.png'.format(sequence)
     filelist = glob.glob(filepath)
+    filelist.sort()
     images = []
     for path in filelist:
-        if use_flow:
+        if model_name == 'pyflownet' or model_name == 'rflownet':
             img = np.load(path)
             images.append(img)
+        elif model_name == 'rdispnet':
+            img = np.load(path)
+            img = np.squeeze(img)
+            for im in img:
+                images.append(im)
         else:
             img = tf.keras.preprocessing.image.load_img(path, target_size=(IMG_SIZE, IMG_SIZE))
             img = tf.keras.preprocessing.image.img_to_array(img)
@@ -75,7 +82,8 @@ def plot_predictions_vs_truth(poses_predicted, poses_original):
     plt.plot(poses_predicted[:,0], poses_predicted[:,2])
     plt.show()
 
-def load_dataset(poses, images, total_num_list, poses_original_set, init_pose_set, data_gen_list, model_name):
+def load_dataset(poses, images, total_num_list, poses_original_set, 
+                init_pose_set, data_gen_list, model_name):
      # First check some stuff for consistency
     N, dim_poses = poses.shape
     assert dim_poses == DIM_PREDICTIONS, "Dimension mismatch between pose data and network output, check loaded data!"
