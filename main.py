@@ -14,8 +14,7 @@ import gc
 
 #TRAIN_SEQUENCES = ['00', '01', '02', '03', '04', '05', '06', '07', '08']
 TRAIN_SEQUENCES = ['01'] # for local machine
-#TEST_SEQUENCES = ['00', '01', '02', '03', '04', '05', '06', '07', '08', '09', '10']
-TEST_SEQUENCES = ['01'] # for local
+TEST_SEQUENCES = ['01'] # one at a time
 
 mutex = Lock()
 
@@ -45,7 +44,7 @@ def main():
     # Populate sequences and num passes based on mode
     sequences = TRAIN_SEQUENCES if mode =='train' else TEST_SEQUENCES
     # Load dataset
-    threads = [] 
+    threads = []
     for sequence in sequences:
         # Load ground truth
         t = Thread(target=load_data, args=(True, sequence, model_name, poses_set, images_set))

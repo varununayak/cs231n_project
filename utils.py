@@ -95,11 +95,11 @@ def load_dataset(poses, images, total_num_list, poses_original_set,
     # Process poses to deltas
     poses = poses - np.vstack((np.zeros((1, dim_poses)), poses[:-1]))
     if model_name == 'pyflownet':
-        data_gen = tf.data.Dataset.from_tensor_slices((images, poses[1:]))
+        data_gen = tf.data.Dataset.from_tensor_slices((images[:-1], poses[2:]))
     elif model_name == 'rdispnet':
-        data_gen = tf.keras.preprocessing.timeseries_dataset_from_array(images, poses, WINDOW_SIZE).unbatch()
+        data_gen = tf.keras.preprocessing.timeseries_dataset_from_array(images[:-WINDOW_SIZE+1], poses[WINDOW_SIZE-1:], WINDOW_SIZE).unbatch()
     else:
-        data_gen = tf.keras.preprocessing.timeseries_dataset_from_array(images, poses[1:], WINDOW_SIZE).unbatch()
+        data_gen = tf.keras.preprocessing.timeseries_dataset_from_array(images[:-WINDOW_SIZE+1], poses[WINDOW_SIZE:], WINDOW_SIZE).unbatch()
     mutex.acquire()
     data_gen_list.append(data_gen)
     poses_original_set.append(poses_original)
