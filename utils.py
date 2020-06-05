@@ -64,7 +64,7 @@ def load_images(sequence='01', model_name='pyflownet'):
         images_d = []
         for path in filelist_d:
             imgs = np.load(path)
-            for img in np.squeeze(imgs):
+            for img in np.squeeze(imgs,axis=1):
                 img = Image.fromarray(img)
                 img = img.resize(size=(IMG_SIZE, IMG_SIZE))
                 img = np.asarray(img)
