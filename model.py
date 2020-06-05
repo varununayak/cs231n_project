@@ -77,7 +77,7 @@ class Model(object):
                                 tf.keras.layers.Conv2D(64, (1,1), (1,1), 'same'),
                                 tf.keras.layers.Flatten(),
                                 tf.keras.layers.Dense(256, activation="elu"),
-                                tf.keras.layers.Dense(DIM_PREDICTIONS)], name='pyflownet')
+                                tf.keras.layers.Dense(DIM_PREDICTIONS)], name='flowdispnet')
         else:
             sys.exit("Model name {} is invalid.".format(self.model_name))
         self.model = model

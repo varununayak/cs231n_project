@@ -55,7 +55,7 @@ def load_poses(pose_path, get_only_translation=True, prediction=False):
 def load_images(sequence='01', model_name='pyflownet'):
     images = []
     if (model_name == 'flowdispnet'):
-        filepath_d = '../disparity_maps/{}/*npy'.format(sequence)
+        filepath_d = '../disparity_maps/{}/*.npy'.format(sequence)
         filepath_f = '../flow_dataset/{}/*.npy'.format(sequence)
         filelist_d = glob.glob(filepath_d)
         filelist_f = glob.glob(filepath_f)
@@ -97,10 +97,7 @@ def load_images(sequence='01', model_name='pyflownet'):
     return images
 
 def cumulate_poses(poses_predicted, init_pose):
-    poses_predicted_cum = [init_pose]
-    for pose_diff in poses_predicted:
-        poses_predicted_cum.append(poses_predicted_cum[-1] + pose_diff)
-    return np.asarray(poses_predicted_cum)
+    return np.cumsum(np.concatenate((np.expand_dims(init_pose,axis=0), poses_predicted), axis=0), axis=0)
 
 def plot_predictions_vs_truth(poses_predicted, poses_original):
     plt.plot(poses_original[:,0], poses_original[:,2])
