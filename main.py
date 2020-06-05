@@ -21,7 +21,7 @@ mutex = Lock()
 def parse_arguments():
     parser = argparse.ArgumentParser(description="RCNN")
     parser.add_argument("--mode", type=str, nargs=1, default=['train'])
-    parser.add_argument("--model_name", type=str, nargs=1, default=['pyflownet'])
+    parser.add_argument("--model_name", type=str, nargs=1, default=['flowdispnet'])
     parsed_args = parser.parse_args()
     mode, model_name = parsed_args.mode[0], parsed_args.model_name[0]
     print("----------------------- Using TensorFlow version:", tf.__version__,"---------------------------")

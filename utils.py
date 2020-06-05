@@ -53,31 +53,47 @@ def load_poses(pose_path, get_only_translation=True, prediction=False):
     return np.asarray(poses)
 
 def load_images(sequence='01', model_name='pyflownet'):
-    if model_name == 'pyflownet' or model_name == 'rflownet':
-        filepath = '../flow_dataset/{}/*.npy'.format(sequence)
-    elif model_name == 'rdispnet':
-        filepath = '../disparity_maps/{}/*npy'.format(sequence)
-    else:
-        filepath = '../dataset/sequences/{}/image_2/*.png'.format(sequence)
-    filelist = glob.glob(filepath)
-    filelist.sort()
     images = []
-    for path in filelist:
-        if model_name == 'pyflownet' or model_name == 'rflownet':
-            img = np.load(path)
-            images.append(img)
-        elif model_name == 'rdispnet':
+    if (model_name == 'flowdispnet'):
+        filepath_d = '../disparity_maps/{}/*npy'.format(sequence)
+        filepath_f = '../flow_dataset/{}/*.npy'.format(sequence)
+        filelist_d = glob.glob(filepath_d)
+        filelist_f = glob.glob(filepath_f)
+        filelist_d.sort()
+        filelist_f.sort()
+        images_d = []
+        for path in filelist_d:
             imgs = np.load(path)
             for img in np.squeeze(imgs):
                 img = Image.fromarray(img)
                 img = img.resize(size=(IMG_SIZE, IMG_SIZE))
-                img = (np.asarray(img) - 0.0)/1.0
+                img = np.asarray(img)
+                img = (img - 80.0)/100.0
                 img = np.expand_dims(img, axis=-1)
-                images.append(img)
+                images_d.append(img)
+        images_f = []
+        for path in filelist_f:
+            img = np.load(path)
+            img /= 80.0
+            images_f.append(img)
+        for img_f, img_d in zip(images_f, images_d[1:]):
+            img = np.concatenate((img_f, img_d), axis=-1)
+            images.append(img)
+    else:
+        if model_name == 'pyflownet' or model_name == 'rflownet':
+            filepath = '../flow_dataset/{}/*.npy'.format(sequence)
         else:
-            img = tf.keras.preprocessing.image.load_img(path, target_size=(IMG_SIZE, IMG_SIZE))
-            img = tf.keras.preprocessing.image.img_to_array(img)
-            images.append(img / 127.5 - 1.0)
+            filepath = '../dataset/sequences/{}/image_2/*.png'.format(sequence)
+        filelist = glob.glob(filepath)
+        filelist.sort()
+        for path in filelist:
+            if model_name == 'pyflownet' or model_name == 'rflownet':
+                img = np.load(path)
+                images.append(img)
+            else:
+                img = tf.keras.preprocessing.image.load_img(path, target_size=(IMG_SIZE, IMG_SIZE))
+                img = tf.keras.preprocessing.image.img_to_array(img)
+                images.append(img / 127.5 - 1.0)
     return images
 
 def cumulate_poses(poses_predicted, init_pose):
@@ -103,10 +119,8 @@ def load_dataset(poses, images, total_num_list, poses_original_set,
     init_pose = poses[-num_poses-1]
     # Process poses to deltas
     poses = poses - np.vstack((np.zeros((1, dim_poses)), poses[:-1]))
-    if model_name == 'pyflownet':
+    if model_name == 'pyflownet' or model_name == 'flowdispnet':
         data_gen = tf.data.Dataset.from_tensor_slices((images[:-1], poses[2:]))
-    elif model_name == 'rdispnet':
-        data_gen = tf.keras.preprocessing.timeseries_dataset_from_array(images[:-WINDOW_SIZE+1], poses[WINDOW_SIZE-1:], WINDOW_SIZE).unbatch()
     elif model_name == 'rflownet':
         data_gen = tf.keras.preprocessing.timeseries_dataset_from_array(images, poses[1:], WINDOW_SIZE).unbatch()
     else:
@@ -138,7 +152,7 @@ def preprocess_data(poses_set, images_set, model_name, mode):
         num_train = int(0.8 * total_num)
         data_gen_train = data_gen.take(num_train)
         data_gen_val = data_gen.skip(num_train)
-        data_gen_train = data_gen_train.batch(16)
+        data_gen_train = data_gen_train.batch(32)
         data_gen_val = data_gen_val.batch(1)
         return data_gen_train, data_gen_val
     else:

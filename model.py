@@ -67,23 +67,17 @@ class Model(object):
                             tf.keras.layers.Dense(DIM_PREDICTIONS)], name='rnn_model')
             model = tf.keras.models.Sequential([tf.keras.layers.TimeDistributed(cnn_model, input_shape=(None, IMG_SIZE, IMG_SIZE, 2))], name='time_dist_cnn_model')
             model = tf.keras.models.Sequential([model, rnn_model])
-        elif self.model_name == 'rdispnet':
-            cnn_model = tf.keras.models.Sequential([tf.keras.layers.Conv2D(32, (5,5), (2,2), 'same', input_shape=(DISP_H, DISP_W, 1)),
+        elif self.model_name == 'flowdispnet':
+            model = tf.keras.models.Sequential([tf.keras.layers.SeparableConv2D(32, (7,7), (2,2), 'same', input_shape=(IMG_SIZE, IMG_SIZE, 3)),
                                 tf.keras.layers.Conv2D(32, (5,5), (2,2), 'same'),
                                 tf.keras.layers.Conv2D(64, (5,5), (2,2), 'same'),
                                 tf.keras.layers.Conv2D(64, (3,3), (2,2), 'same'),
                                 tf.keras.layers.Conv2D(128, (3,3), (2,2), 'same'),
-                                tf.keras.layers.Conv2D(128, (3,3), (2,2), 'same'),
                                 tf.keras.layers.Conv2D(128, (3,3), (1,1), 'same'),
                                 tf.keras.layers.Conv2D(64, (1,1), (1,1), 'same'),
-                                tf.keras.layers.Flatten()])
-            ## ------------------------------------rnn model-------------------------------------##
-            rnn_model = tf.keras.models.Sequential([tf.keras.layers.LSTM(64, return_sequences=True, name='lstm_1'),
-                            tf.keras.layers.LSTM(64, return_sequences=False, name='lstm_2'),
-                            tf.keras.layers.Dense(128, activation="selu"),
-                            tf.keras.layers.Dense(DIM_PREDICTIONS)], name='rnn_model')
-            model = tf.keras.models.Sequential([tf.keras.layers.TimeDistributed(cnn_model, input_shape=(None, IMG_SIZE, IMG_SIZE, 1))], name='time_dist_cnn_model')
-            model = tf.keras.models.Sequential([model, rnn_model])
+                                tf.keras.layers.Flatten(),
+                                tf.keras.layers.Dense(256, activation="elu"),
+                                tf.keras.layers.Dense(DIM_PREDICTIONS)], name='pyflownet')
         else:
             sys.exit("Model name {} is invalid.".format(self.model_name))
         self.model = model
@@ -97,7 +91,7 @@ class Model(object):
     def train(self, data_gen_train, data_gen_val):
         save_weights_callback = tf.keras.callbacks.ModelCheckpoint(filepath=self.checkpoint_path, save_weights_only=True, verbose=1)
         # Define optimizer and compile model
-        if (self.model_name == 'pyflownet'):
+        if self.model_name == 'pyflownet' or self.model_name == 'flowdispnet':
             opt = 'adam'
         else:
             opt = 'adam'
