@@ -8,7 +8,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 from datetime import datetime
 
-NUM_EPOCHS = 100
+NUM_EPOCHS = 20
 
 class Model(object):
 
@@ -82,7 +82,7 @@ class Model(object):
                             tf.keras.layers.LSTM(64, return_sequences=False, name='lstm_2'),
                             tf.keras.layers.Dense(128, activation="selu"),
                             tf.keras.layers.Dense(DIM_PREDICTIONS)], name='rnn_model')
-            model = tf.keras.models.Sequential([tf.keras.layers.TimeDistributed(cnn_model, input_shape=(None, DISP_H, DISP_W, 1))], name='time_dist_cnn_model')
+            model = tf.keras.models.Sequential([tf.keras.layers.TimeDistributed(cnn_model, input_shape=(None, IMG_SIZE, IMG_SIZE, 1))], name='time_dist_cnn_model')
             model = tf.keras.models.Sequential([model, rnn_model])
         else:
             sys.exit("Model name {} is invalid.".format(self.model_name))
@@ -90,14 +90,18 @@ class Model(object):
         # History
         self._history = None
     
+    def loss_func(self, y_true, y_pred):
+        abs_diff = tf.abs(y_true - y_pred)
+        return tf.reduce_mean(abs_diff[:,0:3] ** 2) + 10 * tf.reduce_mean(abs_diff[:,3:])
+
     def train(self, data_gen_train, data_gen_val):
         save_weights_callback = tf.keras.callbacks.ModelCheckpoint(filepath=self.checkpoint_path, save_weights_only=True, verbose=1)
         # Define optimizer and compile model
         if (self.model_name == 'pyflownet'):
             opt = 'adam'
         else:
-            opt = 'sgd'
-        self.model.compile(loss='mae', optimizer=opt, metrics=['mae'])
+            opt = 'adam'
+        self.model.compile(loss=self.loss_func, optimizer=opt, metrics=['mae'])
         # Load any existing weights if they exist
         self._load_existing_weights()
         # Fit on the data

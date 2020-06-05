@@ -7,7 +7,7 @@ import matplotlib.pyplot as plt
 from config import *
 import tensorflow as tf
 from threading import Thread, Lock
-import scipy.misc
+from PIL import Image
 
 mutex = Lock()
 
@@ -23,23 +23,30 @@ def mat_to_zyx_euler_angles(R):
         gamma  = np.arctan2(R[2,1]/c_beta, R[2,2]/c_beta)
     return alpha, beta, gamma
 
-def load_poses(pose_path, get_only_translation=True):
+def load_poses(pose_path, get_only_translation=True, prediction=False):
     # Read and parse the poses
     poses = []
     try:
         with open(pose_path, 'r') as f:
             lines = f.readlines()
             for line in lines:
-                T_w_cam0 = np.fromstring(line, dtype=float, sep=' ')
-                T_w_cam0 = T_w_cam0.reshape(3, 4)
-                T_w_cam0 = np.vstack((T_w_cam0, [0, 0, 0, 1]))  # to complete the homogenous representation
-                if get_only_translation:
-                    T_w_cam0_xyz = np.asarray([T_w_cam0[0,3], T_w_cam0[1,3], T_w_cam0[2,3]])
-                    poses.append(T_w_cam0_xyz) 
+                if prediction:
+                    p = np.fromstring(line, dtype=float, sep=' ')
+                    DIM = 3 if get_only_translation else 6
+                    poses.append(p.reshape(DIM, ))
                 else:
-                    alpha, beta, gamma = mat_to_zyx_euler_angles(T[0:3,0:3])
-                    T_w_cam0_xyz_abg = np.asarray([T_w_cam0[0,3], T_w_cam0[1,3], T_w_cam0[2,3], alpha, beta, gamma])
-                    poses.append(T_w_cam0_xyz_abg)
+                    T_w_cam0 = np.fromstring(line, dtype=float, sep=' ')
+                    T_w_cam0 = T_w_cam0.reshape(3, 4)
+                    T_w_cam0 = np.vstack((T_w_cam0, [0, 0, 0, 1]))  # to complete the homogenous representation
+                    if get_only_translation:
+                        T_w_cam0_xyz = np.asarray([T_w_cam0[0,3], T_w_cam0[1,3], T_w_cam0[2,3]])
+                        poses.append(T_w_cam0_xyz) 
+                        poses.append(T_w_cam0_xyz) 
+                        poses.append(T_w_cam0_xyz) 
+                    else:
+                        alpha, beta, gamma = mat_to_zyx_euler_angles(T_w_cam0[0:3,0:3])
+                        T_w_cam0_xyz_abg = np.asarray([T_w_cam0[0,3], T_w_cam0[1,3], T_w_cam0[2,3], alpha, beta, gamma])
+                        poses.append(T_w_cam0_xyz_abg)
     except:
         print('Error in finding or parsing filename: {}'.format(pose_path))
         exit(0)
@@ -61,10 +68,12 @@ def load_images(sequence='01', model_name='pyflownet'):
             images.append(img)
         elif model_name == 'rdispnet':
             imgs = np.load(path)
-            for im in np.squeeze(imgs):
-                im = (im - 80.0)/100.0
-                im = np.expand_dims(im, axis=-1)
-                images.append(im)
+            for img in np.squeeze(imgs):
+                img = Image.fromarray(img)
+                img = img.resize(size=(IMG_SIZE, IMG_SIZE))
+                img = (np.asarray(img) - 0.0)/1.0
+                img = np.expand_dims(img, axis=-1)
+                images.append(img)
         else:
             img = tf.keras.preprocessing.image.load_img(path, target_size=(IMG_SIZE, IMG_SIZE))
             img = tf.keras.preprocessing.image.img_to_array(img)
@@ -98,8 +107,11 @@ def load_dataset(poses, images, total_num_list, poses_original_set,
         data_gen = tf.data.Dataset.from_tensor_slices((images[:-1], poses[2:]))
     elif model_name == 'rdispnet':
         data_gen = tf.keras.preprocessing.timeseries_dataset_from_array(images[:-WINDOW_SIZE+1], poses[WINDOW_SIZE-1:], WINDOW_SIZE).unbatch()
+    elif model_name == 'rflownet':
+        data_gen = tf.keras.preprocessing.timeseries_dataset_from_array(images, poses[1:], WINDOW_SIZE).unbatch()
     else:
-        data_gen = tf.keras.preprocessing.timeseries_dataset_from_array(images[:-WINDOW_SIZE+1], poses[WINDOW_SIZE:], WINDOW_SIZE).unbatch()
+        print("Invalid model name")
+        exit(0)
     mutex.acquire()
     data_gen_list.append(data_gen)
     poses_original_set.append(poses_original)
@@ -126,7 +138,7 @@ def preprocess_data(poses_set, images_set, model_name, mode):
         num_train = int(0.8 * total_num)
         data_gen_train = data_gen.take(num_train)
         data_gen_val = data_gen.skip(num_train)
-        data_gen_train = data_gen_train.batch(64)
+        data_gen_train = data_gen_train.batch(16)
         data_gen_val = data_gen_val.batch(1)
         return data_gen_train, data_gen_val
     else:
@@ -141,7 +153,15 @@ def write_pose_to_file(poses, save_path):
         print("Saving to {}".format(save_path))
         np.savetxt(save_path, poses, delimiter=" ")
     else: 
-        print("Saving with dims != 3 not supported yet")
+        poses = np.hstack((np.reshape(poses[:,0], (N,1)),
+            np.reshape(poses[:,1], (N,1)),
+            np.reshape(poses[:,2], (N,1)),
+            np.reshape(poses[:,3], (N,1)),
+            np.reshape(poses[:,4], (N,1)),
+            np.reshape(poses[:,5], (N,1)),
+        ))
+        print("Saving to {}".format(save_path))
+        np.savetxt(save_path, poses, delimiter=" ")
 
 
 

@@ -30,7 +30,7 @@ def parse_arguments():
     return mode, model_name
 
 def load_data(get_only_translation, sequence, model_name, poses_set, images_set):
-    poses = load_poses(f'ground_truth_odometry/{sequence}.txt', get_only_translation=True)
+    poses = load_poses(f'ground_truth_odometry/{sequence}.txt', get_only_translation=False)
     images = load_images(sequence, model_name)
     mutex.acquire()
     poses_set.append(poses)

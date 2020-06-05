@@ -51,8 +51,8 @@ def main():
     ground_truth_file_path = 'ground_truth_odometry/{}.txt'.format(sequence)
     predicted_file_path = 'predicted_odometry/{}.txt'.format(sequence)
     # Get poses
-    ground_truth_poses = load_poses(ground_truth_file_path, get_only_translation=True)
-    predicted_poses = load_poses(predicted_file_path, get_only_translation=True)
+    ground_truth_poses = load_poses(ground_truth_file_path, get_only_translation=False)
+    predicted_poses = load_poses(predicted_file_path, get_only_translation=False, prediction=True)
     if (len(ground_truth_poses) != len(predicted_poses)):
         mismatch = len(ground_truth_poses) - len(predicted_poses)
         print("Length mismatch of {} between ground truth and predicted poses files, fixing with zeros..".format(mismatch))
