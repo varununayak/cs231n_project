@@ -8,7 +8,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 from datetime import datetime
 
-NUM_EPOCHS = 20
+NUM_EPOCHS = 5
 
 class Model(object):
 

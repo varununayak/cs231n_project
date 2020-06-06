@@ -3,10 +3,9 @@ import numpy as np
 import tensorflow as tf
 from tensorflow.keras.layers import BatchNormalization
 BatchNormalization._USE_V2_BEHAVIOR = False
-from utils import load_poses, load_images, cumulate_poses, plot_predictions_vs_truth, preprocess_data, write_pose_to_file
+from utils import load_poses, load_images, cumulate_poses, plot_trajectories, preprocess_data, write_pose_to_file
 import os
 import argparse
-from config import *
 from model import Model
 import time
 from threading import Thread, Lock
@@ -74,7 +73,7 @@ def main():
                                                                         init_poses_set, sequences):
             poses_predicted = my_model.predict(data_gen.batch(1))
             poses_predicted = cumulate_poses(poses_predicted, init_pose)
-            plot_predictions_vs_truth(poses_predicted, poses_original)
+            plot_trajectories(poses_original, poses_predicted)
             write_pose_to_file(poses_predicted, save_path=f"predicted_odometry/{sequence}.txt")
     else:
         print(f"INVALID MODE {mode}")
