@@ -12,7 +12,7 @@ from rotations import mat_to_zyx_euler_angles, zyx_euler_angles_to_mat
 
 mutex = Lock()
 
-def load_poses(pose_path, get_only_translation=True):
+def load_poses(pose_path, get_only_translation=True, hom_trans=False):
     '''
     Returns a numpy array of poses stored in a file in pose_path
     according to the KITTI format. We convert the rotation matrix to 
@@ -32,6 +32,9 @@ def load_poses(pose_path, get_only_translation=True):
                 T_w_cam0 = np.fromstring(line, dtype=float, sep=' ')
                 T_w_cam0 = T_w_cam0.reshape(3, 4)
                 T_w_cam0 = np.vstack((T_w_cam0, [0, 0, 0, 1]))  # to complete the homogenous representation
+                if hom_trans:
+                    poses.append(T_w_cam0)
+                    continue
                 if get_only_translation:
                     T_w_cam0_xyz = np.asarray([T_w_cam0[0,3], T_w_cam0[1,3], T_w_cam0[2,3]])
                     poses.append(T_w_cam0_xyz) 

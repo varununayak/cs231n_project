@@ -8,7 +8,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 from datetime import datetime
 
-NUM_EPOCHS = 5
+NUM_EPOCHS = 60
 
 class Model(object):
 
@@ -86,7 +86,7 @@ class Model(object):
     
     def loss_func(self, y_true, y_pred):
         abs_diff = tf.abs(y_true - y_pred)
-        return tf.reduce_mean(abs_diff[:,0:3] ** 2) + 10 * tf.reduce_mean(abs_diff[:,3:])
+        return 10 * tf.reduce_mean(abs_diff[:,0:3]) + 100 * tf.reduce_mean(abs_diff[:,3:])
 
     def train(self, data_gen_train, data_gen_val):
         save_weights_callback = tf.keras.callbacks.ModelCheckpoint(filepath=self.checkpoint_path, save_weights_only=True, verbose=1)
