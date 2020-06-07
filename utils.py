@@ -155,7 +155,9 @@ def load_dataset(poses, images, total_num_list, poses_original_list,
     # Process poses to deltas
     poses = poses - np.vstack((np.zeros((1, dim_poses)), poses[:-1]))
     if model_name == 'pyflownet' or model_name == 'flowdispnet':
-        data_gen = tf.data.Dataset.from_tensor_slices((images[:-1], poses[2:]))
+        if len(images) == 2757:
+            poses = poses[:-3]
+        data_gen = tf.data.Dataset.from_tensor_slices((images, poses[1:]))
     elif model_name == 'rflownet':
         data_gen = tf.keras.preprocessing.timeseries_dataset_from_array(images, poses[1:], WINDOW_SIZE).unbatch()
     else:
